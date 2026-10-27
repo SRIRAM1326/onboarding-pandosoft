@@ -15,13 +15,13 @@ export default function Home() {
             <span className="text-lg font-semibold text-foreground">Pixelonics</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild>
+            <Button variant="liquid-glass" asChild>
               <Link href="/login">Sign In</Link>
             </Button>
-            <Button asChild>
+            <Button variant="liquid-primary" asChild>
               <Link href="/portal">Get Started</Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="liquid" asChild>
               <Link href="/admin">Admin Portal</Link>
             </Button>
           </div>
@@ -41,10 +41,10 @@ export default function Home() {
               Streamline business KYC, beneficial ownership verification, source of funds assessment, and crypto wallet verification through a structured, compliant onboarding process.
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button size="lg" asChild>
+              <Button size="lg" variant="liquid-primary" asChild>
                 <Link href="/portal">Start Onboarding</Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button size="lg" variant="liquid-glass" asChild>
                 <Link href="/admin">View Compliance Dashboard</Link>
               </Button>
             </div>
