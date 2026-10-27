@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 export default function LoginPage() {
   return (
@@ -10,7 +11,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Sign in to Pixelonics</CardTitle>
-          <CardDescription>Access your onboarding portal</CardDescription>
+          <CardDescription>Pixelonics × Pandosoft India Private Limited</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -24,6 +25,19 @@ export default function LoginPage() {
           <Button className="w-full" asChild>
             <Link href="/portal">Sign In (Demo)</Link>
           </Button>
+          <Separator />
+          <div className="space-y-2">
+            <p className="text-center text-xs text-muted-foreground">Quick Demo Access</p>
+            <Button variant="outline" className="w-full" asChild>
+              <Link href="/portal">Login as Customer</Link>
+            </Button>
+            <Button variant="outline" className="w-full" asChild>
+              <Link href="/pixelonics">Login as Pixelonics Team (Operations)</Link>
+            </Button>
+            <Button variant="outline" className="w-full" asChild>
+              <Link href="/pandosoft">Login as Pandosoft Team (Compliance)</Link>
+            </Button>
+          </div>
           <div className="text-center text-sm text-muted-foreground">
             <Link href="/forgot-password" className="hover:underline">
               Forgot password?

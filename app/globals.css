@@ -67,70 +67,129 @@
 }
 
 :root {
-  /* Pixelonics design system */
-  /* 60% white and light gray, 30% navy, 10% teal */
-  --background: #F3F6FA; /* Cool Light Gray - page background */
-  --foreground: #14213D; /* Deep Navy - headings and important text */
+  /* iOS-inspired design system */
+  /* System background colors */
+  --background: #F2F2F7; /* iOS grouped background */
+  --foreground: #000000;
 
-  --card: #FFFFFF; /* Pure White - cards, forms */
-  --card-foreground: #14213D;
+  --card: rgba(255, 255, 255, 0.8); /* Translucent cards */
+  --card-foreground: #000000;
 
-  --popover: #FFFFFF;
-  --popover-foreground: #14213D;
+  --popover: rgba(255, 255, 255, 0.95);
+  --popover-foreground: #000000;
 
-  /* Deep Navy as primary */
-  --primary: #14213D;
+  /* iOS System Blue */
+  --primary: #007AFF;
   --primary-foreground: #FFFFFF;
 
-  /* Teal as secondary/accent actions */
-  --secondary: #F3F6FA;
-  --secondary-foreground: #14213D;
+  /* iOS System Gray */
+  --secondary: rgba(118, 118, 128, 0.12);
+  --secondary-foreground: #000000;
 
-  --muted: #F3F6FA;
-  --muted-foreground: #64748B; /* Slate Gray - descriptions, secondary text */
+  --muted: rgba(118, 118, 128, 0.12);
+  --muted-foreground: rgba(60, 60, 67, 0.6);
 
-  --accent: #0F9D8A; /* Teal - highlights */
+  --accent: #007AFF;
   --accent-foreground: #FFFFFF;
 
-  --destructive: #DC2626; /* Red - rejected/action-required */
-  --border: #E2E8F0;
-  --input: #FFFFFF;
-  --ring: #0F9D8A;
+  --destructive: #FF3B30; /* iOS Red */
+  --border: rgba(60, 60, 67, 0.29);
+  --input: rgba(118, 118, 128, 0.12);
+  --ring: #007AFF;
 
-  /* Brand accent - Teal */
-  --brand: #0F9D8A;
-  --brand-soft: #E6F7F5;
+  /* Brand */
+  --brand: #007AFF;
+  --brand-soft: rgba(0, 122, 255, 0.1);
 
-  /* Status colors */
-  --info: #3B82F6;
-  --info-soft: #EFF6FF;
-  --success: #22C55E; /* Green - approved */
-  --success-soft: #F0FDF4;
-  --warning: #F59E0B; /* Amber - pending */
-  --warning-soft: #FFFBEB;
-  --danger: #DC2626; /* Red - rejected/action-required */
-  --danger-soft: #FEF2F2;
-  --neutral-soft: #F3F6FA;
+  /* iOS Status colors */
+  --info: #007AFF;
+  --info-soft: rgba(0, 122, 255, 0.1);
+  --success: #34C759; /* iOS Green */
+  --success-soft: rgba(52, 199, 89, 0.1);
+  --warning: #FF9500; /* iOS Orange */
+  --warning-soft: rgba(255, 149, 0, 0.1);
+  --danger: #FF3B30; /* iOS Red */
+  --danger-soft: rgba(255, 59, 48, 0.1);
+  --neutral-soft: rgba(118, 118, 128, 0.12);
 
-  --chart-1: #14213D;
-  --chart-2: #0F9D8A;
-  --chart-3: #F59E0B;
-  --chart-4: #22C55E;
-  --chart-5: #DC2626;
-  --chart-6: #64748B;
+  --chart-1: #007AFF;
+  --chart-2: #34C759;
+  --chart-3: #FF9500;
+  --chart-4: #FF3B30;
+  --chart-5: #AF52DE;
+  --chart-6: #5856D6;
 
-  --radius: 0.5rem;
+  --radius: 0.875rem;
 
-  /* Sidebar - Deep Navy */
-  --sidebar: #14213D;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-muted: #94A3B8;
-  --sidebar-primary: #0F9D8A;
+  /* iOS Sidebar - Translucent */
+  --sidebar: rgba(249, 249, 249, 0.8);
+  --sidebar-foreground: #000000;
+  --sidebar-muted: rgba(60, 60, 67, 0.6);
+  --sidebar-primary: #007AFF;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #1E293B;
-  --sidebar-ring: #0F9D8A;
+  --sidebar-accent: rgba(0, 122, 255, 0.1);
+  --sidebar-accent-foreground: #007AFF;
+  --sidebar-border: rgba(60, 60, 67, 0.18);
+  --sidebar-ring: #007AFF;
+}
+
+.dark {
+  /* iOS Dark Mode */
+  --background: #000000;
+  --foreground: #FFFFFF;
+
+  --card: rgba(28, 28, 30, 0.8);
+  --card-foreground: #FFFFFF;
+
+  --popover: rgba(28, 28, 30, 0.95);
+  --popover-foreground: #FFFFFF;
+
+  --primary: #0A84FF;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: rgba(118, 118, 128, 0.24);
+  --secondary-foreground: #FFFFFF;
+
+  --muted: rgba(118, 118, 128, 0.24);
+  --muted-foreground: rgba(235, 235, 245, 0.6);
+
+  --accent: #0A84FF;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #FF453A;
+  --border: rgba(84, 84, 88, 0.65);
+  --input: rgba(118, 118, 128, 0.24);
+  --ring: #0A84FF;
+
+  --brand: #0A84FF;
+  --brand-soft: rgba(10, 132, 255, 0.15);
+
+  --info: #0A84FF;
+  --info-soft: rgba(10, 132, 255, 0.15);
+  --success: #32D74B;
+  --success-soft: rgba(50, 215, 75, 0.15);
+  --warning: #FF9F0A;
+  --warning-soft: rgba(255, 159, 10, 0.15);
+  --danger: #FF453A;
+  --danger-soft: rgba(255, 69, 58, 0.15);
+  --neutral-soft: rgba(118, 118, 128, 0.24);
+
+  --chart-1: #0A84FF;
+  --chart-2: #32D74B;
+  --chart-3: #FF9F0A;
+  --chart-4: #FF453A;
+  --chart-5: #BF5AF2;
+  --chart-6: #5E5CE6;
+
+  --sidebar: rgba(28, 28, 30, 0.8);
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-muted: rgba(235, 235, 245, 0.6);
+  --sidebar-primary: #0A84FF;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(10, 132, 255, 0.15);
+  --sidebar-accent-foreground: #0A84FF;
+  --sidebar-border: rgba(84, 84, 88, 0.65);
+  --sidebar-ring: #0A84FF;
 }
 
 @layer base {
@@ -138,12 +197,17 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01";
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01", "kern" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   html {
     @apply font-sans;
@@ -159,5 +223,31 @@
   }
   .scrollbar-thin {
     scrollbar-width: thin;
+  }
+  /* iOS Glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .glass-dark {
+    background: rgba(28, 28, 30, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(84, 84, 88, 0.65);
+  }
+  .ios-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 1rem;
+    border: 1px solid rgba(60, 60, 67, 0.18);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 10px 40px rgba(0, 0, 0, 0.04);
+  }
+  .dark .ios-card {
+    background: rgba(28, 28, 30, 0.8);
+    border: 1px solid rgba(84, 84, 88, 0.65);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 10px 40px rgba(0, 0, 0, 0.5);
   }
 }

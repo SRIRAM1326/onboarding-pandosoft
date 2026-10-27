@@ -30,6 +30,10 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   customer: "Customer",
+  pixelonics_ops: "Pixelonics Operations",
+  pixelonics_admin: "Pixelonics Admin",
+  pandosoft_reviewer: "Pandosoft Compliance Reviewer",
+  pandosoft_approver: "Pandosoft Compliance Approver",
   compliance_reviewer: "Compliance Reviewer",
   compliance_approver: "Compliance Approver",
   administrator: "Administrator",

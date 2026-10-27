@@ -11,6 +11,10 @@
 
 export type UserRole =
   | "customer"
+  | "pixelonics_ops"
+  | "pixelonics_admin"
+  | "pandosoft_reviewer"
+  | "pandosoft_approver"
   | "compliance_reviewer"
   | "compliance_approver"
   | "administrator";

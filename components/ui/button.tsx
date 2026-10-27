@@ -4,41 +4,44 @@ import { cn } from "cn"
 import { Slot } from "radix-ui"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center gap-1.5 text-sm font-medium whitespace-nowrap outline-none select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center gap-1.5 text-[15px] font-semibold whitespace-nowrap outline-none select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 active:scale-[0.97] transition-all duration-200 -webkit-tap-highlight-color-transparent touch-action-manipulation",
   {
     variants: {
       variant: {
         default:
-          "rounded-lg border border-transparent bg-clip-padding bg-primary text-primary-foreground transition-all hover:bg-primary/80 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px",
+          "rounded-full bg-primary text-primary-foreground shadow-[0_1px_2px_rgba(0,122,255,0.3)] hover:brightness-110 active:brightness-90",
         outline:
-          "rounded-lg border border-border bg-background transition-all hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "rounded-full border border-border/60 bg-[rgba(255,255,255,0.7)] text-foreground backdrop-blur-xl backdrop-saturate-180 shadow-[0_1px_1px_rgba(0,0,0,0.02)] hover:bg-[rgba(255,255,255,0.9)] dark:bg-[rgba(28,28,30,0.7)] dark:hover:bg-[rgba(28,28,30,0.9)]",
         secondary:
-          "rounded-lg border border-transparent bg-clip-padding bg-secondary text-secondary-foreground transition-all hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+          "rounded-full bg-secondary text-secondary-foreground hover:bg-[rgba(118,118,128,0.16)] dark:hover:bg-[rgba(118,118,128,0.32)]",
         ghost:
-          "rounded-lg border border-transparent transition-all hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-muted/50",
+          "rounded-full hover:bg-[rgba(118,118,128,0.12)] active:bg-[rgba(118,118,128,0.18)] dark:hover:bg-[rgba(118,118,128,0.24)] dark:active:bg-[rgba(118,118,128,0.36)]",
         destructive:
-          "rounded-lg border border-transparent bg-clip-padding bg-destructive/10 text-destructive transition-all hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-3 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "rounded-lg text-primary underline-offset-4 hover:underline focus-visible:underline",
+          "rounded-full bg-destructive text-destructive-foreground shadow-[0_1px_2px_rgba(255,59,48,0.3)] hover:brightness-110 active:brightness-90",
+        link: "rounded-full text-primary underline-offset-4 hover:underline focus-visible:underline",
         // iOS Liquid Glass variants
         liquid:
-          "relative overflow-hidden rounded-full border border-white/20 bg-gradient-to-b from-white/40 via-white/10 to-white/5 text-foreground backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-1px_0_rgba(255,255,255,0.2),0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-200 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent after:pointer-events-none after:absolute after:inset-0 after:rounded-full after:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.25),transparent_60%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-1px_0_rgba(255,255,255,0.25),0_12px_40px_rgba(0,0,0,0.16)] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-[0.98] active:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-1px_0_rgba(255,255,255,0.15),0_4px_16px_rgba(0,0,0,0.14)] dark:border-white/10 dark:from-white/10 dark:via-white/5 dark:to-white/2 dark:text-foreground dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.4)] dark:before:via-white/40 dark:after:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.1),transparent_60%)] dark:hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.5)]",
+          "relative overflow-hidden rounded-full border border-white/40 bg-[rgba(255,255,255,0.6)] text-foreground backdrop-blur-2xl backdrop-saturate-200 shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.8)] hover:bg-[rgba(255,255,255,0.75)] focus-visible:ring-2 focus-visible:ring-primary/50 dark:border-white/10 dark:bg-[rgba(28,28,30,0.6)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] dark:hover:bg-[rgba(28,28,30,0.75)]",
         "liquid-primary":
-          "relative overflow-hidden rounded-full border border-white/30 bg-gradient-to-b from-accent/90 via-accent/80 to-accent/70 text-accent-foreground backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-1px_0_rgba(0,0,0,0.1),0_8px_32px_rgba(15,157,138,0.4)] transition-all duration-200 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent after:pointer-events-none after:absolute after:inset-0 after:rounded-full after:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.3),transparent_60%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-1px_0_rgba(0,0,0,0.12),0_12px_40px_rgba(15,157,138,0.5)] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-[0.98] active:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-1px_0_rgba(0,0,0,0.08),0_4px_16px_rgba(15,157,138,0.45)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.2),0_8px_32px_rgba(15,157,138,0.5)] dark:hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(0,0,0,0.25),0_12px_40px_rgba(15,157,138,0.6)]",
+          "relative overflow-hidden rounded-full bg-primary text-primary-foreground shadow-[0_4px_16px_rgba(0,122,255,0.4),inset_0_1px_0_rgba(255,255,255,0.3)] hover:shadow-[0_6px_24px_rgba(0,122,255,0.5)] hover:brightness-110",
         "liquid-glass":
-          "relative overflow-hidden rounded-full border border-white/25 bg-white/10 text-foreground backdrop-blur-2xl backdrop-saturate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_32px_rgba(0,0,0,0.1)] transition-all duration-200 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent after:pointer-events-none after:absolute after:inset-0 after:rounded-full after:bg-[linear-gradient(180deg,rgba(255,255,255,0.15)_0%,transparent_50%)] hover:bg-white/15 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_12px_40px_rgba(0,0,0,0.14)] focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-[0.98] active:bg-white/12 dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_8px_32px_rgba(0,0,0,0.5)] dark:hover:bg-white/10 dark:before:via-white/30",
+          "relative overflow-hidden rounded-full border border-white/30 bg-[linear-gradient(180deg,rgba(255,255,255,0.4)_0%,rgba(255,255,255,0.2)_100%)] text-foreground backdrop-blur-2xl backdrop-saturate-200 shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.7)] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0.3)_100%)] dark:border-white/15 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.06)_100%)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)] dark:hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.1)_100%)]",
+        ios: "rounded-full bg-primary text-primary-foreground shadow-sm hover:opacity-90 active:opacity-70",
+        "ios-plain": "rounded-full text-primary hover:bg-[rgba(0,122,255,0.1)] active:bg-[rgba(0,122,255,0.18)]",
+        "ios-gray": "rounded-full bg-[rgba(118,118,128,0.12)] text-foreground hover:bg-[rgba(118,118,128,0.18)] active:bg-[rgba(118,118,128,0.28)] dark:bg-[rgba(118,118,128,0.24)] dark:hover:bg-[rgba(118,118,128,0.36)]",
       },
       size: {
         default:
-          "h-9 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1 rounded-[min(var(--radius-md),12px)] px-3 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-10 gap-2 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
-        icon: "size-9",
+          "h-10 gap-1.5 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
+        xs: "h-7 gap-1 px-2.5 text-[13px] has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-9 gap-1.5 px-4 text-[14px] has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-12 gap-2 px-6 text-[16px] has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5",
+        icon: "size-10",
         "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+          "size-7 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm":
-          "size-8 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-10",
+          "size-9",
+        "icon-lg": "size-12",
       },
     },
     defaultVariants: {
