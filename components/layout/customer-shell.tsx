@@ -36,7 +36,7 @@ function CustomerShellContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-card/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-card/80 backdrop-blur-xl lg:pl-72">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
@@ -48,13 +48,13 @@ function CustomerShellContent({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" asChild className="relative">
-                <Link href="/portal/notifications">
+                <Link href="/portal/notifications" prefetch={false}>
                   <Bell className="h-4 w-4" />
                   <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/portal/help">
+                <Link href="/portal/help" prefetch={false}>
                   <HelpCircle className="mr-2 h-4 w-4" />
                   Help
                 </Link>
@@ -76,10 +76,10 @@ function CustomerShellContent({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
           <div className="flex grow flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
             <div className="flex h-16 items-center gap-2 px-6">
-              <Link href="/portal" className="flex items-center gap-2">
+              <Link href="/portal" prefetch={false} className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo.png"
@@ -91,11 +91,21 @@ function CustomerShellContent({ children }: { children: React.ReactNode }) {
             <nav className="flex-1 space-y-1 px-3 py-4">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const active = pathname === item.href || (item.href !== "/portal" && pathname.startsWith(item.href));
+                const active =
+                  pathname === item.href ||
+                  (item.href !== "/portal" &&
+                    pathname.startsWith(item.href + "/") &&
+                    !navItems.some(
+                      (other) =>
+                        other.href !== item.href &&
+                        other.href.startsWith(item.href + "/") &&
+                        pathname.startsWith(other.href)
+                    ));
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={false}
                     className={cn(
                       "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       active
@@ -111,7 +121,7 @@ function CustomerShellContent({ children }: { children: React.ReactNode }) {
             </nav>
             <div className="border-t border-sidebar-border p-3">
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" asChild>
-                <Link href="/login">
+                <Link href="/login" prefetch={false}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </Link>

@@ -44,7 +44,7 @@ import type {
   WalletType,
   WalletVerificationMethod,
 } from "@/lib/types";
-import { ArrowLeft, ArrowRight, Save, Plus, Trash2, Download, CheckCircle2, Calendar } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Plus, Trash2, Download, CheckCircle2, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const STEP_SECTIONS: Record<number, SectionKey> = {
@@ -68,9 +68,7 @@ export default function WizardStepPage() {
     updateApplication,
     submitApplication,
     uploadDocument,
-    scheduleVideoKyc,
     uploadVideoKyc,
-    videoSlots,
     policy,
   } = useOnboarding();
 
@@ -265,7 +263,7 @@ export default function WizardStepPage() {
             {stepNum === 3 && `Declare all Ultimate Beneficial Owners with ≥${policy.uboThresholdPercent}% ownership`}
             {stepNum === 4 && "Corporate bank account details, expected volume, and source of funds"}
             {stepNum === 5 && "Register and verify corporate cryptocurrency wallets"}
-            {stepNum === 6 && "Download, sign & acknowledge corporate declarations and book Video KYC"}
+            {stepNum === 6 && "Download, sign & acknowledge corporate declarations and record or upload your Video KYC"}
             {stepNum === 7 && "Review all sections and submit your onboarding application"}
           </CardDescription>
         </CardHeader>
@@ -1154,69 +1152,174 @@ export default function WizardStepPage() {
           {/* STEP 6: DECLARATIONS & VIDEO KYC */}
           {stepNum === 6 && (
             <>
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="font-medium">Corporate Declarations &amp; Undertakings (7 Required)</p>
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold tracking-tight">
+                      Corporate Declarations &amp; Undertakings ({app.declarations.length} Required)
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Download the official document templates, place them on your company letterhead, fill in all required details, and upload the completed documents.
+                    </p>
+                  </div>
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/portal/applications/${app.id}/documents-generation`}>
                       Open Full Declarations Workspace
                     </Link>
                   </Button>
                 </div>
-                <div className="space-y-3">
-                  {app.declarations.map((decl) => (
-                    <div
-                      key={decl.key}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id={decl.key}
-                          checked={decl.acknowledged}
-                          onCheckedChange={(checked) =>
-                            updateApplication(app.id, (cur) => ({
-                              ...cur,
-                              declarations: cur.declarations.map((d) =>
-                                d.key === decl.key
-                                  ? {
-                                      ...d,
-                                      acknowledged: Boolean(checked),
-                                      acknowledgedAt: checked ? new Date().toISOString() : undefined,
-                                    }
-                                  : d
-                              ),
-                            }))
-                          }
-                        />
-                        <div>
-                          <Label htmlFor={decl.key} className="text-sm font-medium">
-                            {decl.name}
+
+                {/* Important Letterhead & Execution Instructions Banner */}
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-foreground space-y-2 dark:bg-amber-950/30 dark:border-amber-500/40">
+                  <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Company Letterhead &amp; Upload Instructions</span>
+                  </div>
+                  <ol className="list-decimal pl-5 space-y-1 text-xs text-muted-foreground leading-relaxed">
+                    <li>
+                      <strong>Download Document Templates:</strong> Download the official Word template (<code>.docx</code>) or pre-filled PDF for each required declaration below.
+                    </li>
+                    <li>
+                      <strong>Place on Company Letterhead:</strong> Print or copy the document directly onto your official <strong>Company Letterhead</strong>.
+                    </li>
+                    <li>
+                      <strong>Fill All Required Details:</strong> Complete all required fields, ensuring legal entity and signatory details match corporate records.
+                    </li>
+                    <li>
+                      <strong>Sign, Stamp &amp; Upload:</strong> Have the authorized signatory sign, affix the official corporate seal / stamp, and upload the scanned copy (PDF, JPG, or PNG) below.
+                    </li>
+                  </ol>
+                </div>
+
+                {/* Declarations List with Download & Upload */}
+                <div className="space-y-4">
+                  {app.declarations.map((decl) => {
+                    const uploadedDoc = app.documents.find(
+                      (d) => d.requirementKey === `signed_${decl.key}`
+                    );
+
+                    return (
+                      <div
+                        key={decl.key}
+                        className="rounded-xl border bg-card p-4 space-y-3 transition-colors hover:border-primary/40"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1 max-w-xl">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-foreground">{decl.name}</span>
+                              <Badge variant="outline" className="text-xs font-normal">
+                                Letterhead Required
+                              </Badge>
+                              {decl.requiresStamp && (
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  Stamp &amp; Seal Required
+                                </Badge>
+                              )}
+                              {uploadedDoc ? (
+                                <Badge variant="default" className="bg-emerald-600 text-white text-xs">
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  Completed &amp; Uploaded
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">
+                                  Upload Pending
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{decl.description}</p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                await downloadDeclarationDocument(app, decl.key as DeclarationKey, "docx");
+                                toast.success(`Downloaded Word template (.docx) for ${decl.name}`);
+                              }}
+                            >
+                              <FileText className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                              Download Template (.docx)
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                await downloadDeclarationDocument(app, decl.key as DeclarationKey, "pdf");
+                                toast.success(`Downloaded pre-filled ${decl.name} (PDF)`);
+                              }}
+                            >
+                              <Download className="mr-1.5 h-3.5 w-3.5" />
+                              Download Pre-filled PDF
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Document Uploader for this declaration */}
+                        <div className="pt-2 border-t border-border/40">
+                          <DocumentUploader
+                            label={`Upload Completed ${decl.name}`}
+                            description="Upload executed document on company letterhead with signature & stamp (PDF/JPEG/PNG)"
+                            required={true}
+                            existingDocument={uploadedDoc}
+                            onUpload={(file) => {
+                              uploadDocument(app.id, file, {
+                                requirementKey: `signed_${decl.key}`,
+                                section: "declarations",
+                                label: `Signed ${decl.name}`,
+                              });
+                              updateApplication(app.id, (cur) => ({
+                                ...cur,
+                                declarations: cur.declarations.map((d) =>
+                                  d.key === decl.key
+                                    ? {
+                                        ...d,
+                                        acknowledged: true,
+                                        acknowledgedAt: new Date().toISOString(),
+                                      }
+                                    : d
+                                ),
+                              }));
+                              toast.success(`Uploaded executed ${decl.name}`);
+                            }}
+                          />
+                        </div>
+
+                        {/* Acknowledgment Confirmation */}
+                        <div className="flex items-center space-x-2 pt-1">
+                          <Checkbox
+                            id={`ack-${decl.key}`}
+                            checked={decl.acknowledged}
+                            onCheckedChange={(checked) =>
+                              updateApplication(app.id, (cur) => ({
+                                ...cur,
+                                declarations: cur.declarations.map((d) =>
+                                  d.key === decl.key
+                                    ? {
+                                        ...d,
+                                        acknowledged: Boolean(checked),
+                                        acknowledgedAt: checked ? new Date().toISOString() : undefined,
+                                      }
+                                    : d
+                                ),
+                              }))
+                            }
+                          />
+                          <Label htmlFor={`ack-${decl.key}`} className="text-xs text-muted-foreground cursor-pointer">
+                            I confirm that this document has been placed on company letterhead, fully filled, signed, and stamped.
                           </Label>
-                          <p className="text-xs text-muted-foreground">{decl.description}</p>
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          await downloadDeclarationDocument(app, decl.key as DeclarationKey, "pdf");
-                          toast.success(`Downloaded pre-filled ${decl.name} (PDF)`);
-                        }}
-                      >
-                        <Download className="mr-1.5 h-3.5 w-3.5" />
-                        Download Pre-filled PDF
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="border-t pt-6">
                 <VideoKycRecorder
                   app={app}
-                  videoSlots={videoSlots}
-                  onScheduleSlot={(slotId) => scheduleVideoKyc(app.id, slotId)}
                   onUploadVideo={(file, spokenScript) => uploadVideoKyc(app.id, file, spokenScript)}
                 />
               </div>

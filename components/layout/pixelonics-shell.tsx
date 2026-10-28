@@ -24,7 +24,7 @@ function PixelonicsShellContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-card/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-card/80 backdrop-blur-xl lg:pl-72">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
@@ -50,7 +50,7 @@ function PixelonicsShellContent({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
           <div className="flex grow flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
             <div className="flex h-16 items-center gap-2.5 px-6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -68,6 +68,7 @@ function PixelonicsShellContent({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={false}
                     className={cn(
                       "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       active

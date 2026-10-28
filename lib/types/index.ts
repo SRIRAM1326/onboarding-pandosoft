@@ -270,11 +270,12 @@ export type KycDocument = ApplicationDocument;
 export type DeclarationKey =
   | "board_resolution"
   | "lien_undertaking"
-  | "client_onboarding_form"
-  | "otc_aml_agreement"
+  | "aml_acknowledgement"
   | "source_of_funds_declaration"
   | "ubo_declaration"
-  | "wallet_declaration";
+  | "wallet_declaration"
+  | "client_onboarding_form"
+  | "otc_aml_agreement";
 
 export interface Declaration {
   key: DeclarationKey;
@@ -285,6 +286,8 @@ export interface Declaration {
   requiresStamp: boolean;
   acknowledged: boolean;
   acknowledgedAt?: string;
+  templateFile?: string;
+  letterheadRequired?: boolean;
 }
 
 /* -------------------------------------------------------------------------- */

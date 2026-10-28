@@ -1,14 +1,42 @@
 import type { Application, DeclarationKey } from "@/lib/types";
 import { appConfig } from "@/lib/config/env";
 
-const DECLARATION_TITLES: Record<DeclarationKey, string> = {
+export const DECLARATION_TITLES: Record<DeclarationKey, string> = {
   board_resolution: "Board Resolution / Authorization Letter",
   lien_undertaking: "Customer Undertaking for Lien Resolution",
+  aml_acknowledgement: "AML Acknowledgement",
+  source_of_funds_declaration: "Source of Funds Declaration",
+  ubo_declaration: "UBO Declaration Form",
+  wallet_declaration: "Wallet Declaration",
   client_onboarding_form: "Client Onboarding Form",
   otc_aml_agreement: "OTC Anti-Money Laundering (AML) Agreement",
-  source_of_funds_declaration: "Source of Funds Declaration",
-  ubo_declaration: "Ultimate Beneficial Ownership (UBO) Declaration",
-  wallet_declaration: "Crypto Wallet Ownership & Control Declaration",
+};
+
+export const DECLARATION_TEMPLATE_FILES: Record<string, { filename: string; path: string }> = {
+  board_resolution: {
+    filename: "BOARD_RESOLUTION_pandosoft.docx",
+    path: "/templates/BOARD_RESOLUTION_pandosoft.docx",
+  },
+  lien_undertaking: {
+    filename: "Customer_Undertaking_for_Lien_Resolution_pandosoft.docx",
+    path: "/templates/Customer_Undertaking_for_Lien_Resolution_pandosoft.docx",
+  },
+  aml_acknowledgement: {
+    filename: "AML_ACKNOWLEDGEMENT_Pandosoft.docx",
+    path: "/templates/AML_ACKNOWLEDGEMENT_Pandosoft.docx",
+  },
+  source_of_funds_declaration: {
+    filename: "Source_of_Funds_Declaration_Pandosoft.docx",
+    path: "/templates/Source_of_Funds_Declaration_Pandosoft.docx",
+  },
+  ubo_declaration: {
+    filename: "UBO_Declaration_Form_Template.docx",
+    path: "/templates/UBO_Declaration_Form_Template.docx",
+  },
+  wallet_declaration: {
+    filename: "WALLET_DECLARATION_Pandosoft.docx",
+    path: "/templates/WALLET_DECLARATION_Pandosoft.docx",
+  },
 };
 
 function pdfEscape(text: string): string {
@@ -69,6 +97,16 @@ export function buildDeclarationPdfBlob(app: Application, key: DeclarationKey): 
         `This Client Onboarding Form summarizes the corporate KYC particulars submitted by ${legalName} under application reference ${app.reference}.`,
         `Designated Bank Account: ${app.financial.bankAccount.bankName || "N/A"} | Account No: ${app.financial.bankAccount.accountNumber || "N/A"} | IFSC: ${app.financial.bankAccount.ifsc || "N/A"}.`,
         `Expected Volume: ${app.financial.expectedVolumeRange || "As declared"} | Frequency: ${app.financial.expectedFrequency || "As declared"}.`,
+      ];
+      break;
+    case "aml_acknowledgement":
+      bodyParagraphs = [
+        `AML ACKNOWLEDGEMENT - USDT OTC TRANSACTIONS`,
+        `Authorised Signatory: ${sigName} | PAN: ${app.signatory.pan || pan} | DOB: ${app.signatory.dateOfBirth || "N/A"}`,
+        `Address: ${app.signatory.residentialAddress?.line1 || app.business.registeredAddress.line1}, ${app.signatory.residentialAddress?.city || app.business.registeredAddress.city}`,
+        `As a Director/Proprietor, I acknowledge and accept the terms of Pandosoft India Pvt Limited ("Pandosoft Exchange") for USDT OTC transactions.`,
+        `I confirm that the USDT withdrawn or INR deposited will not be misused or involved in any AML issues. I understand and agree that Pandosoft India Pvt Ltd will not be responsible for any such misuse in the future and that I will be fully responsible for all such cases.`,
+        `Additionally, I affirm that all transactions conducted are lawful and compliant with relevant regulations, and I agree to cooperate with any audits or compliance checks as required by Pandosoft India Pvt Ltd.`,
       ];
       break;
     case "otc_aml_agreement":
@@ -175,6 +213,17 @@ export async function downloadDeclarationDocument(
   key: DeclarationKey,
   format: "pdf" | "docx" = "pdf"
 ): Promise<void> {
+  if (format === "docx" && DECLARATION_TEMPLATE_FILES[key]) {
+    const tmpl = DECLARATION_TEMPLATE_FILES[key];
+    const a = document.createElement("a");
+    a.href = tmpl.path;
+    a.download = tmpl.filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  }
+
   const filename = `${app.reference}_${key}.${format}`;
   try {
     const res = await fetch(

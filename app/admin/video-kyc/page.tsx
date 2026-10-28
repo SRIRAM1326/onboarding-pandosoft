@@ -10,7 +10,7 @@ import { Database, Video, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function VideoKycPage() {
-  const { applications, recordVideoKycOutcome, scheduleVideoKyc, videoSlots } = useOnboarding();
+  const { applications, recordVideoKycOutcome } = useOnboarding();
 
   return (
     <div className="space-y-6">
@@ -70,18 +70,6 @@ export default function VideoKycPage() {
                       <Database className="mr-1 h-3 w-3" />
                       Video Saved in DB
                     </Badge>
-                  )}
-                  {app.videoKyc.status === "not_scheduled" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        scheduleVideoKyc(app.id, videoSlots[0].id);
-                        toast.success("Scheduled Video KYC slot");
-                      }}
-                    >
-                      Schedule Next Slot
-                    </Button>
                   )}
                   <Button
                     size="sm"

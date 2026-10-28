@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VIDEO_KYC_STATUS_LABELS } from "@/lib/constants/labels";
-import type { Application, VideoKycSlot } from "@/lib/types";
+import type { Application } from "@/lib/types";
 import {
   Video,
   Upload,
@@ -14,7 +14,6 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  Calendar,
   Database,
   FileVideo,
   Camera,
@@ -43,15 +42,11 @@ I confirm that I am duly authorized to operate this account as per the Board Res
 
 interface VideoKycRecorderProps {
   app: Application;
-  videoSlots: VideoKycSlot[];
-  onScheduleSlot: (slotId: string) => void;
   onUploadVideo: (file: File, spokenScript: string) => Promise<{ videoUrl: string }>;
 }
 
 export function VideoKycRecorder({
   app,
-  videoSlots,
-  onScheduleSlot,
   onUploadVideo,
 }: VideoKycRecorderProps) {
   const [showPrefilled, setShowPrefilled] = useState(true);
@@ -531,49 +526,6 @@ export function VideoKycRecorder({
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* 3. OPTIONAL LIVE OFFICER SLOT SCHEDULING */}
-      <div className="rounded-lg border p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium">
-            Optional: Schedule Live Video KYC Verification Call
-          </p>
-          {app.videoKyc.officerName && (
-            <span className="text-xs text-muted-foreground">
-              Scheduled with {app.videoKyc.officerName} (
-              {app.videoKyc.scheduledAt
-                ? new Date(app.videoKyc.scheduledAt).toLocaleString()
-                : ""}
-              )
-            </span>
-          )}
-        </div>
-        <div className="grid gap-2 md:grid-cols-3">
-          {videoSlots.map((slot) => {
-            const isSelected = app.videoKyc.slotId === slot.id;
-            return (
-              <Button
-                key={slot.id}
-                type="button"
-                variant={isSelected ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  onScheduleSlot(slot.id);
-                  toast.success(`Scheduled Video KYC with ${slot.officerName}`);
-                }}
-              >
-                <Calendar className="mr-1.5 h-3.5 w-3.5" />
-                {new Date(slot.startsAt).toLocaleDateString()}{" "}
-                {new Date(slot.startsAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}{" "}
-                — {slot.officerName}
-              </Button>
-            );
-          })}
         </div>
       </div>
     </div>

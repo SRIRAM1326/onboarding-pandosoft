@@ -6,11 +6,12 @@ from xml.sax.saxutils import escape
 DECLARATION_TITLES = {
     "board_resolution": "Board Resolution / Authorization Letter",
     "lien_undertaking": "Customer Undertaking for Lien Resolution",
+    "aml_acknowledgement": "AML Acknowledgement",
+    "source_of_funds_declaration": "Source of Funds Declaration",
+    "ubo_declaration": "UBO Declaration Form",
+    "wallet_declaration": "Wallet Declaration",
     "client_onboarding_form": "Client Onboarding Form",
     "otc_aml_agreement": "OTC Anti-Money Laundering (AML) Agreement",
-    "source_of_funds_declaration": "Source of Funds Declaration",
-    "ubo_declaration": "Ultimate Beneficial Ownership (UBO) Declaration",
-    "wallet_declaration": "Crypto Wallet Ownership & Control Declaration",
 }
 
 
@@ -54,6 +55,14 @@ def build_declaration_sections(app_obj, declaration_key: str):
             f"This Client Onboarding Form summarizes the corporate KYC particulars submitted by {legal_name} under application reference {app_obj.reference_number}.",
             f"Designated Bank Account: {bank.get('bankName', 'N/A')} | Account Holder: {bank.get('accountHolderName', legal_name)} | Account No: {bank.get('accountNumber', 'N/A')} | IFSC: {bank.get('ifsc', 'N/A')}.",
             f"Expected Monthly Volume: {fin.get('expectedVolumeRange', 'As declared')} | Frequency: {fin.get('expectedFrequency', 'As declared')}.",
+        ]
+    elif declaration_key == "aml_acknowledgement":
+        body_paragraphs = [
+            "AML ACKNOWLEDGEMENT - USDT OTC TRANSACTIONS",
+            f"Authorised Signatory: {sig_name} | PAN: {sig_pan} | Entity: {legal_name}",
+            "As a Director/Proprietor, I acknowledge and accept the terms of Pandosoft India Pvt Limited ('Pandosoft Exchange') for USDT OTC transactions.",
+            "I confirm that the USDT withdrawn or INR deposited will not be misused or involved in any AML issues. I understand and agree that Pandosoft India Pvt Ltd will not be responsible for any such misuse in the future and that I will be fully responsible for all such cases.",
+            "Additionally, I affirm that all transactions conducted are lawful and compliant with relevant regulations, and I agree to cooperate with any audits or compliance checks as required by Pandosoft India Pvt Ltd.",
         ]
     elif declaration_key == "otc_aml_agreement":
         body_paragraphs = [

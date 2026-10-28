@@ -147,7 +147,10 @@ function sanitizeStateForStorage(state: PersistedState): PersistedState {
       videoKyc: {
         ...app.videoKyc,
         videoUrl:
-          app.videoKyc.videoUrl && app.videoKyc.videoUrl.startsWith("blob:")
+          app.videoKyc.videoUrl &&
+          (app.videoKyc.videoUrl.startsWith("blob:") ||
+            app.videoKyc.videoUrl.startsWith("data:") ||
+            app.videoKyc.videoUrl.length > 500)
             ? undefined
             : app.videoKyc.videoUrl,
       },
@@ -155,7 +158,9 @@ function sanitizeStateForStorage(state: PersistedState): PersistedState {
         ...doc,
         previewUrl:
           doc.previewUrl &&
-          (doc.previewUrl.startsWith("blob:") || doc.previewUrl.length > 4096)
+          (doc.previewUrl.startsWith("blob:") ||
+            doc.previewUrl.startsWith("data:") ||
+            doc.previewUrl.length > 500)
             ? undefined
             : doc.previewUrl,
       })),
@@ -192,27 +197,40 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
-  // 1. Lightweight hydration from localStorage on mount
+  // 1. Lightweight hydration from localStorage on mount (with strict safety against giant blobs)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        // If previous state in localStorage was bloated (>500KB) from base64 files, clean it
-        const parsed = JSON.parse(raw) as Partial<PersistedState>;
-        if (parsed.applications && parsed.applications.length > 0) {
-          const merged: PersistedState = {
-            ...initialState,
-            ...parsed,
-            applications: parsed.applications.map((a) =>
-              a.id === "app-demo-001" && (!a.documents || a.documents.length === 0)
-                ? { ...a, documents: mockApplications[0].documents }
-                : a
-            ),
-          };
-          const cleaned = sanitizeStateForStorage(merged);
-          setState(cleaned);
-          if (raw.length > 100_000) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+        // If raw is abnormally large (>50KB) or contains embedded base64 data URLs, sanitize immediately
+        if (raw.length > 50_000 || raw.includes("data:video") || raw.includes("data:image")) {
+          localStorage.removeItem(STORAGE_KEY);
+        } else {
+          const parsed = JSON.parse(raw) as Partial<PersistedState>;
+          if (parsed.applications && parsed.applications.length > 0) {
+            const merged: PersistedState = {
+              ...initialState,
+              ...parsed,
+              applications: parsed.applications.map((a) => {
+                const hasOldDeclarations = a.declarations?.some(
+                  (d) => d.key === "client_onboarding_form" || d.key === "otc_aml_agreement"
+                );
+                const decls =
+                  !a.declarations || a.declarations.length === 0 || hasOldDeclarations
+                    ? mockApplications[0].declarations
+                    : a.declarations;
+                return {
+                  ...a,
+                  declarations: decls,
+                  documents:
+                    a.id === "app-demo-001" && (!a.documents || a.documents.length === 0)
+                      ? mockApplications[0].documents
+                      : a.documents,
+                };
+              }),
+            };
+            const cleaned = sanitizeStateForStorage(merged);
+            setState(cleaned);
           }
         }
       }
@@ -224,86 +242,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       }
     }
     setHydrated(true);
-
-    // 2. Defer IndexedDB video hydration until after initial paint
-    const timer = setTimeout(() => {
-      getAllVideosFromIndexedDb()
-        .then((records) => {
-          if (!records || records.length === 0) return;
-          setState((prev) => ({
-            ...prev,
-            applications: prev.applications.map((app) => {
-              const rec = records.find(
-                (r) => r.applicationId === app.id || r.reference === app.reference
-              );
-              if (!rec) return app;
-              let videoUrl = rec.serverVideoUrl || app.videoKyc.videoUrl || "";
-              if (rec.blob && typeof URL !== "undefined") {
-                try {
-                  videoUrl = trackObjectUrl(URL.createObjectURL(rec.blob));
-                } catch {
-                  // fallback
-                }
-              }
-              if (!videoUrl) return app;
-              const hasDoc = app.documents.some((d) => d.requirementKey === "video_kyc");
-              const vkycDoc: ApplicationDocument = {
-                id: `doc-vkyc-${app.id}`,
-                applicationId: app.id,
-                requirementKey: "video_kyc",
-                section: "declarations",
-                label: "Video KYC Recording",
-                fileName: rec.fileName,
-                fileSize: Number(rec.fileSize) || 0,
-                mimeType: rec.mimeType || "video/mp4",
-                uploadedAt: rec.uploadedAt,
-                version: 1,
-                status: "ready_for_review",
-                reviewerNotes: "",
-                previewUrl: videoUrl,
-                history: [
-                  {
-                    version: 1,
-                    fileName: rec.fileName,
-                    fileSize: Number(rec.fileSize) || 0,
-                    uploadedAt: rec.uploadedAt,
-                    status: "ready_for_review",
-                  },
-                ],
-              };
-              return {
-                ...app,
-                videoKyc: {
-                  ...app.videoKyc,
-                  status:
-                    app.videoKyc.status === "not_scheduled"
-                      ? "completed"
-                      : app.videoKyc.status,
-                  videoUrl,
-                  fileName: rec.fileName,
-                  fileSize: Number(rec.fileSize) || 0,
-                  mimeType: rec.mimeType || "video/mp4",
-                  uploadedAt: rec.uploadedAt,
-                  spokenScript: rec.spokenScript || app.videoKyc.spokenScript,
-                },
-                documents: hasDoc
-                  ? app.documents.map((d) =>
-                      d.requirementKey === "video_kyc"
-                        ? { ...d, previewUrl: videoUrl, fileName: rec.fileName }
-                        : d
-                    )
-                  : [...app.documents, vkycDoc],
-              };
-            }),
-          }));
-        })
-        .catch(() => {
-          // ignore IndexedDB errors
-        });
-    }, 200);
-
-    return () => clearTimeout(timer);
-  }, [trackObjectUrl]);
+  }, []);
 
   // 3. Debounced (500ms) & sanitized localStorage persistence
   useEffect(() => {
@@ -319,10 +258,13 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     return () => clearTimeout(timeoutId);
   }, [state, hydrated]);
 
-  const getApplication = useCallback((id: string): Application => {
-    const apps = stateRef.current.applications;
-    return apps.find((a) => a.id === id) ?? apps[0] ?? mockApplications[0];
-  }, []);
+  const getApplication = useCallback(
+    (id: string): Application => {
+      const apps = state.applications.length > 0 ? state.applications : stateRef.current.applications;
+      return apps.find((a) => a.id === id) ?? stateRef.current.applications.find((a) => a.id === id) ?? apps[0] ?? mockApplications[0];
+    },
+    [state.applications]
+  );
 
   const loginAsEmail = useCallback(async (email: string, password?: string): Promise<User> => {
     try {
@@ -516,24 +458,33 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         internalNotes: [],
       };
 
-      setState((prev) => ({
-        ...prev,
-        applications: [newApp, ...prev.applications],
-        notifications: [
-          {
-            id: `notif-${Date.now()}`,
-            userId: prev.currentUser.id,
-            applicationId: newApp.id,
-            kind: "info",
-            title: `Application ${newApp.reference} Created`,
-            body: `Draft application ${newApp.reference} is ready for completion.`,
-            createdAt: now,
-            read: false,
-            href: `/portal/applications/${newApp.id}/step/1`,
-          },
-          ...prev.notifications,
-        ],
-      }));
+      setState((prev) => {
+        const nextState: PersistedState = {
+          ...prev,
+          applications: [newApp, ...prev.applications],
+          notifications: [
+            {
+              id: `notif-${Date.now()}`,
+              userId: prev.currentUser.id,
+              applicationId: newApp.id,
+              kind: "info",
+              title: `Application ${newApp.reference} Created`,
+              body: `Draft application ${newApp.reference} is ready for completion.`,
+              createdAt: now,
+              read: false,
+              href: `/portal/applications/${newApp.id}/step/1`,
+            },
+            ...prev.notifications,
+          ],
+        };
+        stateRef.current = nextState;
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeStateForStorage(nextState)));
+        } catch {
+          // ignore
+        }
+        return nextState;
+      });
       return newApp;
     },
     []
@@ -572,7 +523,9 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           updatedApp = next;
           return next;
         });
-        return { ...prev, applications: apps };
+        const nextState = { ...prev, applications: apps };
+        stateRef.current = nextState;
+        return nextState;
       });
       return updatedApp;
     },
@@ -614,7 +567,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         submitted = next;
         return next;
       });
-      return {
+      const nextState: PersistedState = {
         ...prev,
         applications: apps,
         notifications: [
@@ -632,6 +585,13 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           ...prev.notifications,
         ],
       };
+      stateRef.current = nextState;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeStateForStorage(nextState)));
+      } catch {
+        // ignore
+      }
+      return nextState;
     });
     return submitted;
   }, []);

@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { OnboardingProvider } from "@/lib/store/onboarding-store";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Pixelonics Client Onboarding Portal",
@@ -17,7 +10,22 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${inter.className} h-full antialiased`}>
+    <html lang="en" className="h-full antialiased">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var k = 'pixelonics_onboarding_state_v1';
+                var raw = localStorage.getItem(k);
+                if (raw && (raw.length > 50000 || raw.indexOf('data:video') !== -1 || raw.indexOf('data:image') !== -1)) {
+                  localStorage.removeItem(k);
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col font-sans">
         <OnboardingProvider>
           {children}
