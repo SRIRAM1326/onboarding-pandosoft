@@ -26,7 +26,7 @@ class UserInDBBase(UserBase):
     role: UserRole
     is_active: bool
     is_verified: bool
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -42,6 +42,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    user: Optional[User] = None
 
 class TokenPayload(BaseModel):
     sub: Optional[int] = None

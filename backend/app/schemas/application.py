@@ -1,11 +1,10 @@
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from pydantic import BaseModel
 from datetime import datetime
-from app.models.application import ApplicationStatus, EntityType
 
 class ApplicationBase(BaseModel):
     legal_name: Optional[str] = None
-    entity_type: Optional[EntityType] = None
+    entity_type: Optional[str] = None
     entity_type_other: Optional[str] = None
     pan: Optional[str] = None
     registration_number: Optional[str] = None
@@ -24,23 +23,40 @@ class ApplicationBase(BaseModel):
     financial: Optional[Any] = None
     wallets: Optional[Any] = None
     declarations: Optional[Any] = None
+    video_kyc: Optional[Any] = None
+    verifications: Optional[Any] = None
+    internal_notes: Optional[Any] = None
+    ops_checklist: Optional[Any] = None
 
 class ApplicationCreate(BaseModel):
-    customer_id: Optional[int] = None  # For creating on behalf
+    customer_id: Optional[int] = None
+    legal_name: Optional[str] = ""
+    contact_name: Optional[str] = ""
+    business_email: Optional[str] = ""
+    business_phone: Optional[str] = ""
 
 class ApplicationUpdate(ApplicationBase):
-    pass
+    status: Optional[str] = None
+    assigned_pixelonics_ops_id: Optional[int] = None
+    assigned_pandosoft_reviewer_id: Optional[int] = None
+    ops_review_notes: Optional[str] = None
+    compliance_review_notes: Optional[str] = None
+    decision_reason: Optional[str] = None
 
 class ApplicationInDBBase(ApplicationBase):
     id: int
     reference_number: str
     customer_id: int
-    status: ApplicationStatus
+    status: str
     assigned_pixelonics_ops_id: Optional[int] = None
     assigned_pandosoft_reviewer_id: Optional[int] = None
-    created_at: datetime
+    ops_review_notes: Optional[str] = None
+    compliance_review_notes: Optional[str] = None
+    decision_reason: Optional[str] = None
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     submitted_at: Optional[datetime] = None
+    decided_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -49,6 +65,8 @@ class Application(ApplicationInDBBase):
     pass
 
 class ApplicationReview(BaseModel):
-    action: str  # approve_ops, request_corrections, mark_ready_compliance, approve_compliance, reject
+    action: str  # approve_ops, request_corrections, mark_ready_compliance, approve_compliance, reject, add_note, verify_wallet, record_video_kyc
     notes: Optional[str] = None
-    corrections: Optional[List[Any]] = None
+    subject_id: Optional[str] = None
+    outcome: Optional[str] = None
+    corrections: Optional[List[Dict[str, Any]]] = None

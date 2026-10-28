@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Users, FileText } from "lucide-react";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b border-border/60 bg-[rgba(249,249,249,0.8)] backdrop-blur-2xl backdrop-saturate-180 dark:bg-[rgba(28,28,30,0.8)]">
         <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary shadow-[0_2px_8px_rgba(0,122,255,0.4)]">
-              <ShieldCheck className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight text-foreground">Pixelonics</span>
-          </div>
+          <Link href="/" className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Pixelonics"
+              className="h-8 w-auto object-contain"
+            />
+          </Link>
           <div className="flex items-center gap-1.5">
             <Button variant="ios-plain" size="sm" asChild>
               <Link href="/login">Sign In</Link>

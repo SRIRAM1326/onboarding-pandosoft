@@ -4,9 +4,18 @@ import { appConfig } from "@/lib/config/env";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export interface AdminDashboardStats {
+  total: number;
+  submitted: number;
+  underReview: number;
+  actionRequired: number;
+  approved: number;
+  rejected: number;
+}
+
 export interface AdminService {
-  listAllApplications: (filters?: any) => Promise<ApplicationSummary[]>;
-  getDashboardStats: () => Promise<any>;
+  listAllApplications: (filters?: Record<string, unknown>) => Promise<ApplicationSummary[]>;
+  getDashboardStats: () => Promise<AdminDashboardStats>;
 }
 
 class MockAdminService implements AdminService {

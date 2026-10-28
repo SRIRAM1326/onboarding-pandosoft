@@ -1,64 +1,113 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Download, Upload, FileText } from "lucide-react";
+"use client";
 
-const docs = [
-  "Board Resolution / Authorization Letter",
-  "Customer Undertaking for Lien Resolution",
-  "Client Onboarding Form (Complete all pages)",
-  "OTC AML Agreement",
-  "Source of Funds Declaration",
-  "UBO (Ultimate Beneficial Owner) Declaration Form",
-  "Wallet Declaration Form",
-];
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { DocumentUploader } from "@/components/documents/document-uploader";
+import { useOnboarding } from "@/lib/store/onboarding-store";
+import { downloadDeclarationDocument } from "@/lib/utils/document-generator";
+import type { DeclarationKey } from "@/lib/types";
+import { ArrowLeft, Download, FileCheck2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function DocumentsGenerationPage() {
+  const { id } = useParams<{ id: string }>();
+  const { getApplication, uploadDocument, updateApplication } = useOnboarding();
+  const app = getApplication(id);
+
+  const handleDownload = async (key: DeclarationKey, name: string, format: "pdf" | "docx") => {
+    await downloadDeclarationDocument(app, key, format);
+    toast.success(`Generated & downloaded ${name} (${format.toUpperCase()})`);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Document Generation & Signed Upload</h1>
-        <p className="text-muted-foreground">Generate required documents from submitted data, sign & stamp, upload signed copies</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Auto-Generated Corporate Declarations ({app.reference})
+          </h1>
+          <p className="text-muted-foreground">
+            Pre-populated with {app.business.legalName || "your company"} details. Download, sign &amp; stamp on company letterhead, then upload the executed copy.
+          </p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link href={`/portal/applications/${app.id}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Application
+          </Link>
+        </Button>
       </div>
 
-      <div className="rounded-lg bg-warning-soft p-4 text-sm text-warning">
-        <p className="font-medium">Important</p>
-        <p>All declarations, undertakings, and authorization documents must be submitted on the client's official letterhead, duly signed and stamped by the authorized signatory.</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>7 Required Onboarding Documents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {docs.map((doc, idx) => (
-              <div key={doc} className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-primary" />
+      <div className="grid gap-4">
+        {app.declarations.map((decl) => {
+          const uploadedSignedDoc = app.documents.find(
+            (d) => d.requirementKey === `signed_${decl.key}`
+          );
+          return (
+            <Card key={decl.key}>
+              <CardHeader className="pb-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium">{idx + 1}. {doc}</p>
-                    <p className="text-sm text-muted-foreground">Status: Not Generated</p>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <FileCheck2 className="h-4 w-4 text-primary" />
+                      {decl.name}
+                    </CardTitle>
+                    <CardDescription>{decl.description}</CardDescription>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {decl.requiresSignature && <Badge variant="outline">Signature Required</Badge>}
+                    {decl.requiresStamp && <Badge variant="outline">Company Stamp Required</Badge>}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(decl.key, decl.name, "pdf")}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" />
+                      Download PDF
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(decl.key, decl.name, "docx")}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" />
+                      Download DOCX
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Generate .DOCX
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Generate .PDF
-                  </Button>
-                  <Button size="sm">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Signed & Stamped
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              </CardHeader>
+              <CardContent>
+                <DocumentUploader
+                  label={`Upload Signed & Stamped ${decl.name}`}
+                  description="Upload the executed scan (PDF/JPEG/PNG) after signing and stamping"
+                  required={true}
+                  existingDocument={uploadedSignedDoc}
+                  onUpload={(file) => {
+                    uploadDocument(app.id, file, {
+                      requirementKey: `signed_${decl.key}`,
+                      section: "declarations",
+                      label: `Signed ${decl.name}`,
+                    });
+                    updateApplication(app.id, (cur) => ({
+                      ...cur,
+                      declarations: cur.declarations.map((d) =>
+                        d.key === decl.key
+                          ? { ...d, acknowledged: true, acknowledgedAt: new Date().toISOString() }
+                          : d
+                      ),
+                    }));
+                  }}
+                />
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

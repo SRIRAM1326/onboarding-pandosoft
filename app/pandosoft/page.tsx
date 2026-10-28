@@ -1,20 +1,30 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ApplicationStatusBadge } from "@/components/ui/status-badge";
+import { useOnboarding } from "@/lib/store/onboarding-store";
 import { FileSearch, CheckCircle, Clock } from "lucide-react";
 import Link from "next/link";
 
 export default function PandosoftDashboard() {
+  const { summaries } = useOnboarding();
+  const awaiting = summaries.filter((a) => a.status === "under_review" || a.status === "submitted").length;
+  const approved = summaries.filter((a) => a.status === "approved").length;
+
   const stats = [
-    { label: "Awaiting Pandosoft Review", value: 1, icon: Clock },
-    { label: "In Review", value: 0, icon: FileSearch },
-    { label: "Approved", value: 0, icon: CheckCircle },
+    { label: "Awaiting Pandosoft Review", value: awaiting, icon: Clock },
+    { label: "Total in Queue", value: summaries.length, icon: FileSearch },
+    { label: "Approved for Activation", value: approved, icon: CheckCircle },
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Pandosoft Compliance Dashboard</h1>
-        <p className="text-muted-foreground">Pandosoft India Private Limited - Compliance Review</p>
+        <p className="text-muted-foreground">
+          Pandosoft India Private Limited — Final KYC, AML &amp; Wallet Compliance Review
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -42,15 +52,25 @@ export default function PandosoftDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="font-medium">PX-DEMO-001</p>
-                <p className="text-sm text-muted-foreground">Orbitrade Solutions Pvt. Ltd. • Marked Ready by Pixelonics Ops</p>
+            {summaries.map((app) => (
+              <div
+                key={app.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+              >
+                <div>
+                  <p className="font-medium">{app.reference}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {app.businessName} • {app.documentProgress.verified}/{app.documentProgress.uploaded} Docs Verified
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ApplicationStatusBadge status={app.status} />
+                  <Button size="sm" asChild>
+                    <Link href={`/pandosoft/applications/${app.id}`}>Review Application</Link>
+                  </Button>
+                </div>
               </div>
-              <Button size="sm" asChild>
-                <Link href="/pandosoft/applications/app-demo-001">Start Review</Link>
-              </Button>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>

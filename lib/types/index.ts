@@ -313,6 +313,13 @@ export interface VideoKycSession {
   durationMinutes: number;
   officerName?: string;
   outcomeNote?: string;
+  videoUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  uploadedAt?: string;
+  spokenScript?: string;
+  documentId?: string;
 }
 
 /* -------------------------------------------------------------------------- */

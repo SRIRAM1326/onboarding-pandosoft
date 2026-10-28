@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backend & large media/database files
+/backend/venv/
+/backend/__pycache__/
+__pycache__/
+*.pyc
+*.db
+*.mp4
+/public/uploads/
+/backend/uploads/
+/backend/video_kyc_records.json

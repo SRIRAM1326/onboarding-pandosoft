@@ -51,10 +51,13 @@ function PandosoftShellContent({ children }: { children: React.ReactNode }) {
       <div className="flex">
         <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
           <div className="flex grow flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="flex h-16 items-center gap-2 px-6">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sidebar-primary to-sidebar-primary/70 flex items-center justify-center">
-                <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
-              </div>
+            <div className="flex h-16 items-center gap-2.5 px-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-mark.png"
+                alt="Pixelonics × Pandosoft"
+                className="h-7 w-7 object-contain"
+              />
               <div className="text-lg font-semibold">Pandosoft Team</div>
             </div>
             <nav className="flex-1 space-y-1 px-3 py-4">

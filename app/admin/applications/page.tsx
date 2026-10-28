@@ -1,22 +1,40 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { mockApplicationSummaries } from "@/lib/mock-data/applications";
+import { ApplicationStatusBadge } from "@/components/ui/status-badge";
+import { useOnboarding } from "@/lib/store/onboarding-store";
 
 export default function AdminApplicationsPage() {
+  const { summaries } = useOnboarding();
+  const [search, setSearch] = useState("");
+
+  const filtered = summaries.filter(
+    (app) =>
+      app.reference.toLowerCase().includes(search.toLowerCase()) ||
+      app.businessName.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Applications</h1>
-        <p className="text-muted-foreground">Search and filter all applications</p>
+        <p className="text-muted-foreground">Search and filter all onboarding applications</p>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-            <Input placeholder="Search by reference or business name..." className="max-w-sm" />
+            <Input
+              placeholder="Search by reference or business name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-sm"
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -33,18 +51,22 @@ export default function AdminApplicationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockApplicationSummaries.map((app) => (
+              {filtered.map((app) => (
                 <TableRow key={app.id}>
                   <TableCell className="font-medium">{app.reference}</TableCell>
                   <TableCell>{app.businessName}</TableCell>
-                  <TableCell>{app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : "-"}</TableCell>
+                  <TableCell>
+                    {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : "-"}
+                  </TableCell>
                   <TableCell>{app.assignedReviewerName}</TableCell>
-                  <TableCell>Under Review</TableCell>
+                  <TableCell>
+                    <ApplicationStatusBadge status={app.status} />
+                  </TableCell>
                   <TableCell>
                     {app.documentProgress.verified}/{app.documentProgress.uploaded}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" asChild>
+                    <Button variant="outline" size="sm" asChild>
                       <Link href={`/admin/applications/${app.id}`}>Review</Link>
                     </Button>
                   </TableCell>

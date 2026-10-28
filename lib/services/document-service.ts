@@ -1,4 +1,4 @@
-import type { ApplicationDocument, DocumentStatus } from "@/lib/types";
+import type { ApplicationDocument } from "@/lib/types";
 import { appConfig } from "@/lib/config/env";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

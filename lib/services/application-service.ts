@@ -1,4 +1,4 @@
-import type { Application, ApplicationSummary, SectionKey } from "@/lib/types";
+import type { Application, ApplicationSummary } from "@/lib/types";
 import { mockApplications, mockApplicationSummaries } from "@/lib/mock-data/applications";
 import { appConfig } from "@/lib/config/env";
 

@@ -11,7 +11,6 @@ import {
   LogOut,
   Menu,
   PlusCircle,
-  ShieldCheck,
   User,
   X,
 } from "lucide-react";
@@ -80,10 +79,14 @@ function CustomerShellContent({ children }: { children: React.ReactNode }) {
         <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
           <div className="flex grow flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
             <div className="flex h-16 items-center gap-2 px-6">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sidebar-primary to-sidebar-primary/70 flex items-center justify-center">
-                <ShieldCheck className="h-5 w-5 text-sidebar-primary-foreground" />
-              </div>
-              <div className="text-lg font-semibold">Pixelonics</div>
+              <Link href="/portal" className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.png"
+                  alt="Pixelonics"
+                  className="h-7 w-auto object-contain"
+                />
+              </Link>
             </div>
             <nav className="flex-1 space-y-1 px-3 py-4">
               {navItems.map((item) => {
@@ -122,7 +125,12 @@ function CustomerShellContent({ children }: { children: React.ReactNode }) {
             <div className="fixed inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
             <div className="fixed inset-y-0 left-0 w-72 bg-sidebar text-sidebar-foreground">
               <div className="flex h-16 items-center justify-between px-6">
-                <div className="text-lg font-semibold">Pixelonics</div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.png"
+                  alt="Pixelonics"
+                  className="h-7 w-auto object-contain"
+                />
                 <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
                   <X className="h-5 w-5" />
                 </Button>
