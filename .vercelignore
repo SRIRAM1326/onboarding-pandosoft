@@ -1,0 +1,7 @@
+# Vercel Deployment Ignore
+backend/
+templete/
+uploads/
+*.db
+*.sqlite
+*.pyc
