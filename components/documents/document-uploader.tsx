@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   Upload,
   FileText,
@@ -11,6 +11,7 @@ import {
   EyeOff,
   Maximize2,
   Image as ImageIcon,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,7 +55,7 @@ export function DocumentUploader({
   onUpload,
   label,
   description,
-  maxSizeMb = 10,
+  maxSizeMb = 50,
   existingDocument,
   required = true,
   conditionLabel,
@@ -76,19 +77,18 @@ export function DocumentUploader({
   const [error, setError] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const [prevSource, setPrevSource] = useState<string | undefined>(
+    existingDocument?.previewUrl ?? existingDocument?.fileName ?? localPreviewUrl ?? ""
+  );
+
+  const currentSource = existingDocument?.previewUrl ?? existingDocument?.fileName ?? localPreviewUrl ?? "";
+  if (currentSource !== prevSource) {
+    setPrevSource(currentSource);
     setImgFailed(false);
-  }, [existingDocument?.previewUrl, existingDocument?.fileName, localPreviewUrl]);
+  }
 
   const validateFile = (f: File) => {
-    if (
-      !ACCEPTED_MIME_TYPES.includes(f.type as (typeof ACCEPTED_MIME_TYPES)[number]) &&
-      !ACCEPTED_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext))
-    ) {
-      setError("Only PDF, JPEG, and PNG files are accepted");
-      toast.error("Only PDF, JPEG, and PNG files are accepted");
-      return false;
-    }
+    // Whatever the customer uploads (image, PDF, DOC, or any file format), accept it
     if (f.size > maxSizeMb * 1024 * 1024) {
       setError(`File size must be less than ${maxSizeMb}MB`);
       toast.error(`File size must be less than ${maxSizeMb}MB`);
@@ -154,6 +154,7 @@ export function DocumentUploader({
   const activeStatus = existingDocument?.status ?? (file ? "ready_for_review" : undefined);
 
   const isImage = isImageFile(activeName, activeMime);
+  const isPdf = activeName?.toLowerCase().endsWith(".pdf") || activeMime === "application/pdf";
   const rawPreviewUrl = localPreviewUrl ?? existingDocument?.previewUrl;
   const displayImageUrl =
     isImage && activeName
@@ -214,7 +215,7 @@ export function DocumentUploader({
           >
             <Upload className="mb-2 h-7 w-7 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Drag and drop or click to upload</p>
-            <p className="text-xs text-muted-foreground">PDF, JPEG, PNG (max {maxSizeMb}MB)</p>
+            <p className="text-xs text-muted-foreground">Image, PDF, DOC, or any other file format (max {maxSizeMb}MB)</p>
             <Button
               type="button"
               variant="outline"
@@ -263,7 +264,7 @@ export function DocumentUploader({
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                {displayImageUrl && (
+                {(displayImageUrl || (isPdf && rawPreviewUrl)) && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -273,12 +274,12 @@ export function DocumentUploader({
                     {showPreview ? (
                       <>
                         <EyeOff className="mr-1.5 h-3.5 w-3.5" />
-                        Hide Image
+                        Hide Preview
                       </>
                     ) : (
                       <>
                         <Eye className="mr-1.5 h-3.5 w-3.5" />
-                        Show Image
+                        Show Preview
                       </>
                     )}
                   </Button>
@@ -338,6 +339,72 @@ export function DocumentUploader({
                 </div>
               </div>
             )}
+
+            {isPdf && rawPreviewUrl && showPreview && (
+              <div className="overflow-hidden rounded-lg border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5 text-rose-600" />
+                    Uploaded PDF Document — {activeName}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => window.open(rawPreviewUrl, "_blank")}
+                  >
+                    <ExternalLink className="mr-1 h-3 w-3" />
+                    Open in New Tab
+                  </Button>
+                </div>
+                <div className="h-64 rounded-md border bg-white overflow-hidden shadow-inner">
+                  <iframe
+                    src={`${rawPreviewUrl}#toolbar=0`}
+                    title={activeName}
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            {!isImage && !isPdf && activeName && rawPreviewUrl && showPreview && (
+              <div className="overflow-hidden rounded-lg border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5 text-primary" />
+                    Uploaded Document — {activeName}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => window.open(rawPreviewUrl, "_blank")}
+                    >
+                      <ExternalLink className="mr-1 h-3 w-3" />
+                      Open
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      asChild
+                    >
+                      <a href={rawPreviewUrl} download={activeName}>
+                        Download
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-md border bg-background p-3 text-xs text-muted-foreground flex items-center justify-between">
+                  <span>Format: <strong>{activeName.split(".").pop()?.toUpperCase() || "Document"}</strong> (Saved in database exactly as uploaded)</span>
+                  <span className="font-mono">{(activeSize / 1024).toFixed(1)} KB</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -381,7 +448,7 @@ export function DocumentUploader({
           ref={inputRef}
           type="file"
           className="hidden"
-          accept=".pdf,.jpg,.jpeg,.png"
+          accept="*/*"
           onChange={handleChange}
         />
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}

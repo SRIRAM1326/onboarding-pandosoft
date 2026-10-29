@@ -17,18 +17,6 @@ from app.models.user import User, UserRole
 
 router = APIRouter()
 
-ALLOWED_MIME_TYPES = {
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/jpg",
-    "video/mp4",
-    "video/webm",
-    "video/quicktime",
-    "video/x-matroska",
-}
-ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".mp4", ".webm", ".mov", ".mkv"}
-
 class DocumentReviewPayload(BaseModel):
     status: str  # verified_demo, rejected_demo, replacement_required, under_review
     reviewer_notes: Optional[str] = ""
@@ -44,16 +32,14 @@ async def upload_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
-    ext = os.path.splitext(file.filename or "")[1].lower()
-    if file.content_type not in ALLOWED_MIME_TYPES and ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Only PDF, JPEG, and PNG files are accepted.")
-
+    # Customer can upload image, PDF, DOC, or any other file format
+    # Content and format must be saved in the database exactly as uploaded without conversion or compression
     content = await file.read()
     if len(content) > settings.MAX_UPLOAD_SIZE:
-        raise HTTPException(status_code=400, detail="File exceeds maximum upload size (10MB).")
+        raise HTTPException(status_code=400, detail="File exceeds maximum upload size (100MB).")
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    safe_name = os.path.basename(file.filename or "document.pdf")
+    safe_name = os.path.basename(file.filename or "document")
     stored_name = f"app{application_id}_{int(datetime.now(timezone.utc).timestamp())}_{safe_name}"
     file_path = os.path.join(settings.UPLOAD_DIR, stored_name)
     with open(file_path, "wb") as buffer:
@@ -70,12 +56,14 @@ async def upload_document(
     )
 
     now_iso = datetime.now(timezone.utc).isoformat()
+    mime_type = file.content_type or "application/octet-stream"
     if existing:
         existing.version = (existing.version or 1) + 1
         existing.file_name = safe_name
         existing.file_path = file_path
         existing.file_size = len(content)
-        existing.mime_type = file.content_type or "application/pdf"
+        existing.mime_type = mime_type
+        existing.file_data = content
         existing.status = DocumentStatus.READY_FOR_REVIEW.value
         hist = list(existing.history or [])
         hist.append(
@@ -99,7 +87,8 @@ async def upload_document(
             file_name=safe_name,
             file_path=file_path,
             file_size=len(content),
-            mime_type=file.content_type or "application/pdf",
+            mime_type=mime_type,
+            file_data=content,
             status=DocumentStatus.READY_FOR_REVIEW.value,
             owner_ref=owner_ref,
             version=1,
@@ -198,6 +187,26 @@ def review_document(
     db.commit()
     db.refresh(doc)
     return {"id": str(doc.id), "status": doc.status, "reviewerNotes": doc.reviewer_notes}
+
+@router.get("/{document_id}/file")
+def get_document_file(document_id: int, download: bool = False, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    data = doc.file_data
+    if not data and doc.file_path and os.path.exists(doc.file_path):
+        with open(doc.file_path, "rb") as f:
+            data = f.read()
+    if not data:
+        raise HTTPException(status_code=404, detail="File content not found in database or disk")
+
+    disposition = "attachment" if download else "inline"
+    safe_name = os.path.basename(doc.file_name or f"document_{doc.id}")
+    return Response(
+        content=data,
+        media_type=doc.mime_type or "application/octet-stream",
+        headers={"Content-Disposition": f'{disposition}; filename="{safe_name}"'}
+    )
 
 @router.get("/generate/{application_id}/{declaration_key}")
 def generate_declaration_document(

@@ -13,7 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { ApplicationStatusBadge } from "@/components/ui/status-badge";
 import { DOCUMENT_STATUS_LABELS } from "@/lib/constants/labels";
 import { useOnboarding } from "@/lib/store/onboarding-store";
-import { ArrowLeft, CheckCircle, AlertCircle, Check, X } from "lucide-react";
+import { DocumentViewerModal } from "@/components/documents/document-viewer-modal";
+import { isPdfFile, isImageFile } from "@/lib/utils/document-previews";
+import type { ApplicationDocument } from "@/lib/types";
+import { ArrowLeft, CheckCircle, AlertCircle, Check, X, Eye, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PixelonicsApplicationReviewPage() {
@@ -39,6 +42,7 @@ export default function PixelonicsApplicationReviewPage() {
   const [showCorrectionForm, setShowCorrectionForm] = useState(false);
   const [corrReason, setCorrReason] = useState("");
   const [corrInstructions, setCorrInstructions] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState<ApplicationDocument | null>(null);
 
   const handleMarkReady = () => {
     assignReviewer(app.id, "usr-pan-rev-1");
@@ -171,52 +175,100 @@ export default function PixelonicsApplicationReviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Document Verification Queue ({app.documents.length})</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle>Document Verification Queue ({app.documents.length})</CardTitle>
+              <CardDescription>
+                Review and verify all customer-uploaded documents (Images, PDFs, Word, and other formats)
+              </CardDescription>
+            </div>
+            <Badge variant="outline">
+              {app.documents.filter((d) => d.status === "verified_demo").length} of {app.documents.length} Verified
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {app.documents.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-            >
-              <div>
-                <p className="font-medium">{doc.label}</p>
-                <p className="text-xs text-muted-foreground">
-                  {doc.fileName} • {(doc.fileSize / 1024).toFixed(0)} KB
-                </p>
+          {app.documents.map((doc) => {
+            const isPdf = isPdfFile(doc.fileName, doc.mimeType);
+            const isImage = isImageFile(doc.fileName, doc.mimeType);
+
+            return (
+              <div
+                key={doc.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm transition-colors hover:border-primary/40 bg-card"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-bold">
+                    {isPdf ? "PDF" : isImage ? "IMG" : <FileText className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{doc.label}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {doc.fileName} • {(doc.fileSize / 1024).toFixed(0)} KB
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Badge variant="outline">{DOCUMENT_STATUS_LABELS[doc.status]}</Badge>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={() => setSelectedDoc(doc)}
+                  >
+                    <Eye className="mr-1 h-3.5 w-3.5" />
+                    View
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-emerald-600 border-emerald-300"
+                    onClick={() => {
+                      reviewDocument(app.id, doc.id, "verified_demo", "Verified by Pixelonics Ops");
+                      toast.success(`Verified ${doc.label}`);
+                    }}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" />
+                    Verify
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-destructive"
+                    onClick={() => {
+                      reviewDocument(app.id, doc.id, "replacement_required", "Please re-upload a clearer copy");
+                      toast.warning(`Requested replacement for ${doc.label}`);
+                    }}
+                  >
+                    <X className="mr-1 h-3.5 w-3.5" />
+                    Replace
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{DOCUMENT_STATUS_LABELS[doc.status]}</Badge>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    reviewDocument(app.id, doc.id, "verified_demo", "Verified by Pixelonics Ops");
-                    toast.success(`Verified ${doc.label}`);
-                  }}
-                >
-                  <Check className="mr-1 h-3.5 w-3.5" />
-                  Verify
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="text-destructive"
-                  onClick={() => {
-                    reviewDocument(app.id, doc.id, "replacement_required", "Please re-upload a clearer copy");
-                    toast.warning(`Requested replacement for ${doc.label}`);
-                  }}
-                >
-                  <X className="mr-1 h-3.5 w-3.5" />
-                  Request Replacement
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
+
+      {/* DOCUMENT VIEWER MODAL */}
+      <DocumentViewerModal
+        document={selectedDoc}
+        isOpen={Boolean(selectedDoc)}
+        onClose={() => setSelectedDoc(null)}
+        application={app}
+        allDocuments={app.documents}
+        onSelectDocument={(doc) => setSelectedDoc(doc)}
+        onVerify={(docId, notes) => {
+          reviewDocument(app.id, docId, "verified_demo", notes);
+        }}
+        onReject={(docId, notes) => {
+          reviewDocument(app.id, docId, "replacement_required", notes);
+        }}
+      />
     </div>
   );
 }

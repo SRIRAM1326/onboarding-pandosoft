@@ -8,15 +8,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DOCUMENT_STATUS_LABELS, SECTION_LABELS } from "@/lib/constants/labels";
 import { useOnboarding } from "@/lib/store/onboarding-store";
+import { DocumentViewerModal } from "@/components/documents/document-viewer-modal";
+import { isPdfFile, isImageFile } from "@/lib/utils/document-previews";
 import type { ApplicationDocument } from "@/lib/types";
-import { FileText, Upload, Eye, X } from "lucide-react";
+import { FileText, Upload, Eye } from "lucide-react";
 
 export default function DocumentsPage() {
   const { applications } = useOnboarding();
-  const [previewDoc, setPreviewDoc] = useState<ApplicationDocument | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<(ApplicationDocument & { appReference: string }) | null>(null);
+
   const allDocs = applications.flatMap((app) =>
     app.documents.map((d) => ({ ...d, appReference: app.reference }))
   );
+
+  const targetApp = selectedDoc
+    ? applications.find((a) => a.id === selectedDoc.applicationId)
+    : undefined;
 
   return (
     <div className="space-y-6">
@@ -59,89 +66,73 @@ export default function DocumentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allDocs.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell>
-                      {doc.previewUrl && doc.mimeType?.startsWith("image/") ? (
+                {allDocs.map((doc) => {
+                  const isPdf = isPdfFile(doc.fileName, doc.mimeType);
+                  const isImage = isImageFile(doc.fileName, doc.mimeType);
+
+                  return (
+                    <TableRow key={doc.id}>
+                      <TableCell>
                         <button
                           type="button"
-                          onClick={() => setPreviewDoc(doc)}
-                          className="h-10 w-10 overflow-hidden rounded border bg-muted"
+                          onClick={() => setSelectedDoc(doc)}
+                          className="h-10 w-10 flex items-center justify-center overflow-hidden rounded border bg-muted hover:border-primary transition-colors"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={doc.previewUrl}
-                            alt={doc.fileName}
-                            className="h-full w-full object-cover"
-                          />
+                          {isPdf ? (
+                            <span className="text-[10px] font-bold text-rose-600">PDF</span>
+                          ) : isImage && doc.previewUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={doc.previewUrl}
+                              alt={doc.fileName}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                          )}
                         </button>
-                      ) : (
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{doc.appReference}</TableCell>
-                    <TableCell>{doc.label}</TableCell>
-                    <TableCell>{SECTION_LABELS[doc.section]}</TableCell>
-                    <TableCell className="text-muted-foreground">{doc.fileName}</TableCell>
-                    <TableCell>v{doc.version}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{DOCUMENT_STATUS_LABELS[doc.status]}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {doc.previewUrl ? (
+                      </TableCell>
+                      <TableCell className="font-medium">{doc.appReference}</TableCell>
+                      <TableCell>{doc.label}</TableCell>
+                      <TableCell>{SECTION_LABELS[doc.section]}</TableCell>
+                      <TableCell className="text-muted-foreground">{doc.fileName}</TableCell>
+                      <TableCell>v{doc.version}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{DOCUMENT_STATUS_LABELS[doc.status]}</Badge>
+                      </TableCell>
+                      <TableCell>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => setPreviewDoc(doc)}
+                          onClick={() => setSelectedDoc(doc)}
                         >
                           <Eye className="mr-1.5 h-3.5 w-3.5" />
                           View
                         </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {doc.reviewerNotes || "-"}
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
 
-      {previewDoc && previewDoc.previewUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
-          onClick={() => setPreviewDoc(null)}
-        >
-          <div
-            className="relative max-h-[90vh] max-w-4xl overflow-auto rounded-xl border bg-background p-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between gap-4 border-b pb-2">
-              <div>
-                <p className="font-semibold">{previewDoc.label}</p>
-                <p className="text-xs text-muted-foreground">{previewDoc.fileName}</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setPreviewDoc(null)}>
-                <X className="mr-1 h-4 w-4" />
-                Close
-              </Button>
-            </div>
-            <div className="flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewDoc.previewUrl}
-                alt={previewDoc.fileName}
-                className="max-h-[75vh] w-auto rounded object-contain"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* DOCUMENT VIEWER MODAL */}
+      <DocumentViewerModal
+        document={selectedDoc}
+        isOpen={Boolean(selectedDoc)}
+        onClose={() => setSelectedDoc(null)}
+        application={targetApp}
+        allDocuments={allDocs}
+        onSelectDocument={(doc) => {
+          const appDoc = doc as ApplicationDocument & { appReference: string };
+          setSelectedDoc(appDoc);
+        }}
+        isOfficer={false}
+      />
     </div>
   );
 }

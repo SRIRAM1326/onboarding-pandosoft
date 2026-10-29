@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -28,6 +28,7 @@ class Document(Base):
     file_path = Column(String)
     file_size = Column(Integer, default=0)
     mime_type = Column(String, default="application/pdf")
+    file_data = Column(LargeBinary, nullable=True)
     status = Column(String, default=DocumentStatus.READY_FOR_REVIEW.value)
     owner_ref = Column(String, nullable=True)  # For UBO or wallet specific docs
     is_generated = Column(Boolean, default=False)

@@ -8,6 +8,7 @@ import React, {
   useCallback,
   useMemo,
   useRef,
+  useSyncExternalStore,
 } from "react";
 import type {
   Application,
@@ -33,7 +34,10 @@ import {
 import { mockUsers, currentMockUser } from "@/lib/mock-data/users";
 import { mockNotifications } from "@/lib/mock-data/notifications";
 import { appConfig } from "@/lib/config/env";
-import { getAllVideosFromIndexedDb, saveVideoToIndexedDb } from "@/lib/utils/video-db";
+import { saveVideoToIndexedDb } from "@/lib/utils/video-db";
+import { saveDocumentBlob } from "@/lib/utils/document-db";
+import { validateApplicationForApproval } from "@/lib/utils/verification-rules";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "pixelonics_onboarding_state_v1";
 
@@ -170,12 +174,92 @@ function sanitizeStateForStorage(state: PersistedState): PersistedState {
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 
+function loadPersistedState(): PersistedState {
+  if (typeof window === "undefined") return initialState;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return initialState;
+    if (raw.length > 50_000 || raw.includes("data:video") || raw.includes("data:image")) {
+      localStorage.removeItem(STORAGE_KEY);
+      return initialState;
+    }
+    const parsed = JSON.parse(raw) as Partial<PersistedState>;
+    if (parsed.applications && parsed.applications.length > 0) {
+      const merged: PersistedState = {
+        ...initialState,
+        ...parsed,
+        applications: parsed.applications.map((a) => {
+          const hasOldDeclarations = a.declarations?.some(
+            (d) => d.key === "client_onboarding_form" || d.key === "otc_aml_agreement"
+          );
+          const decls =
+            !a.declarations || a.declarations.length === 0 || hasOldDeclarations
+              ? mockApplications[0].declarations
+              : a.declarations;
+          return {
+            ...a,
+            declarations: decls,
+            documents:
+              a.id === "app-demo-001" && (!a.documents || a.documents.length === 0)
+                ? mockApplications[0].documents
+                : a.documents,
+          };
+        }),
+      };
+      return sanitizeStateForStorage(merged);
+    }
+  } catch {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+  return initialState;
+}
+
+const emptySubscribe = () => () => {};
+
+function detectDocumentMimeType(fileName: string, mimeType?: string): string {
+  if (mimeType && mimeType.trim() && mimeType !== "application/octet-stream") {
+    return mimeType;
+  }
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "pdf": return "application/pdf";
+    case "png": return "image/png";
+    case "jpg":
+    case "jpeg": return "image/jpeg";
+    case "webp": return "image/webp";
+    case "svg": return "image/svg+xml";
+    case "gif": return "image/gif";
+    case "bmp": return "image/bmp";
+    case "doc": return "application/msword";
+    case "docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    case "xls": return "application/vnd.ms-excel";
+    case "xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    case "csv": return "text/csv";
+    case "txt": return "text/plain";
+    case "json": return "application/json";
+    case "xml": return "application/xml";
+    case "zip": return "application/zip";
+    default: return mimeType || "application/octet-stream";
+  }
+}
+
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<PersistedState>(initialState);
-  const [hydrated, setHydrated] = useState(false);
+  const [state, setState] = useState<PersistedState>(loadPersistedState);
+  const hydrated = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   const stateRef = useRef<PersistedState>(state);
-  stateRef.current = state;
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   const objectUrlsRef = useRef<string[]>([]);
 
@@ -195,53 +279,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       });
       objectUrlsRef.current = [];
     };
-  }, []);
-
-  // 1. Lightweight hydration from localStorage on mount (with strict safety against giant blobs)
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        // If raw is abnormally large (>50KB) or contains embedded base64 data URLs, sanitize immediately
-        if (raw.length > 50_000 || raw.includes("data:video") || raw.includes("data:image")) {
-          localStorage.removeItem(STORAGE_KEY);
-        } else {
-          const parsed = JSON.parse(raw) as Partial<PersistedState>;
-          if (parsed.applications && parsed.applications.length > 0) {
-            const merged: PersistedState = {
-              ...initialState,
-              ...parsed,
-              applications: parsed.applications.map((a) => {
-                const hasOldDeclarations = a.declarations?.some(
-                  (d) => d.key === "client_onboarding_form" || d.key === "otc_aml_agreement"
-                );
-                const decls =
-                  !a.declarations || a.declarations.length === 0 || hasOldDeclarations
-                    ? mockApplications[0].declarations
-                    : a.declarations;
-                return {
-                  ...a,
-                  declarations: decls,
-                  documents:
-                    a.id === "app-demo-001" && (!a.documents || a.documents.length === 0)
-                      ? mockApplications[0].documents
-                      : a.documents,
-                };
-              }),
-            };
-            const cleaned = sanitizeStateForStorage(merged);
-            setState(cleaned);
-          }
-        }
-      }
-    } catch {
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // ignore
-      }
-    }
-    setHydrated(true);
   }, []);
 
   // 3. Debounced (500ms) & sanitized localStorage persistence
@@ -610,6 +647,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         previewUrl = undefined;
       }
 
+      const resolvedMime = detectDocumentMimeType(file.name, file.type);
+
       const newDoc: ApplicationDocument = {
         id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         applicationId,
@@ -619,7 +658,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         label: meta.label,
         fileName: file.name,
         fileSize: file.size,
-        mimeType: file.type || "application/pdf",
+        mimeType: resolvedMime,
         uploadedAt: now,
         version: 1,
         status: "ready_for_review",
@@ -695,6 +734,66 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         });
         return { ...prev, applications: apps };
       });
+
+      // Identify target doc id whether new or replacement
+      const existingApp = stateRef.current.applications.find((a) => a.id === applicationId);
+      const existingDoc = existingApp?.documents.find(
+        (d) =>
+          d.requirementKey === meta.requirementKey &&
+          (d.ownerRef ?? undefined) === (meta.ownerRef ?? undefined)
+      );
+      const targetDocId = existingDoc ? existingDoc.id : newDoc.id;
+
+      // 1. Persist raw file Blob to client IndexedDB immediately
+      saveDocumentBlob(newDoc.id, file, file.name, resolvedMime, applicationId).catch(() => {});
+      if (existingDoc) {
+        saveDocumentBlob(targetDocId, file, file.name, resolvedMime, applicationId).catch(() => {});
+      }
+
+      // 2. Asynchronously persist uploaded document to server storage & SQLite database
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("applicationId", applicationId);
+        form.append("requirementKey", meta.requirementKey);
+        form.append("section", meta.section);
+        form.append("label", meta.label);
+        if (meta.ownerRef) form.append("ownerRef", meta.ownerRef);
+
+        fetch("/api/documents", {
+          method: "POST",
+          body: form,
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data?.fileUrl) {
+              setState((prev) => ({
+                ...prev,
+                applications: prev.applications.map((app) =>
+                  app.id !== applicationId
+                    ? app
+                    : {
+                        ...app,
+                        documents: app.documents.map((d) =>
+                          d.id === targetDocId || d.id === newDoc.id
+                            ? {
+                                ...d,
+                                previewUrl: data.fileUrl,
+                                fileName: data.fileName || d.fileName,
+                                fileSize: data.fileSize || d.fileSize,
+                                mimeType: data.mimeType || d.mimeType,
+                              }
+                            : d
+                        ),
+                      }
+                ),
+              }));
+            }
+          })
+          .catch(() => {});
+      } catch {
+        // ignore background upload errors
+      }
 
       return newDoc;
     },
@@ -899,6 +998,23 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   const recordDecision = useCallback(
     (applicationId: string, status: ApplicationStatus, reason?: string) => {
+      const cur = stateRef.current;
+      const targetApp = cur.applications.find((a) => a.id === applicationId);
+
+      // Compliance validation gate: Approval requires all required documents and video KYC to be verified
+      if (status === "approved" && targetApp) {
+        const report = validateApplicationForApproval(targetApp, cur.policy);
+        if (!report.canApprove) {
+          toast.error(
+            "Approval blocked: All required documents and the customer's KYC video must be verified first.",
+            {
+              description: report.blockingReasons[0] || "Compliance conditions incomplete.",
+            }
+          );
+          return;
+        }
+      }
+
       setState((prev) => {
         const now = new Date().toISOString();
         const apps = prev.applications.map((app) => {

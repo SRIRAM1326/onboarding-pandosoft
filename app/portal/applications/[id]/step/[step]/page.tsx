@@ -1186,7 +1186,7 @@ export default function WizardStepPage() {
                       <strong>Fill All Required Details:</strong> Complete all required fields, ensuring legal entity and signatory details match corporate records.
                     </li>
                     <li>
-                      <strong>Sign, Stamp &amp; Upload:</strong> Have the authorized signatory sign, affix the official corporate seal / stamp, and upload the scanned copy (PDF, JPG, or PNG) below.
+                      <strong>Sign, Stamp &amp; Upload:</strong> Have the authorized signatory sign, affix the official corporate seal / stamp, and upload the executed document (PDF, DOC, DOCX, Image, or any file format) below.
                     </li>
                   </ol>
                 </div>
@@ -1261,7 +1261,7 @@ export default function WizardStepPage() {
                         <div className="pt-2 border-t border-border/40">
                           <DocumentUploader
                             label={`Upload Completed ${decl.name}`}
-                            description="Upload executed document on company letterhead with signature & stamp (PDF/JPEG/PNG)"
+                            description="Upload executed document on company letterhead with signature & stamp (PDF, DOC/DOCX, Image, or any file format)"
                             required={true}
                             existingDocument={uploadedDoc}
                             onUpload={(file) => {

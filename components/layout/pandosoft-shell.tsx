@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { BarChart3, CheckCircle, FileSearch, LogOut, Menu, Shield, X } from "lucide-react";
-import { useState } from "react";
+import { BarChart3, CheckCircle, FileSearch, LogOut, Menu, Shield } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,13 +18,12 @@ const navItems = [
 
 function PandosoftShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border/50 bg-card/80 backdrop-blur-xl lg:pl-72">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
+          <Button variant="ghost" size="icon" className="lg:hidden">
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex flex-1 items-center justify-between">
