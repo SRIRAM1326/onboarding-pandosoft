@@ -25,7 +25,12 @@ def pandosoft_dashboard(
 ):
     awaiting = (
         db.query(Application)
-        .filter(Application.status.in_(["ready_for_compliance", "under_review", "pending_compliance_review"]))
+        .filter(Application.status.in_(["ready_for_compliance", "pending_compliance_review"]))
+        .count()
+    )
+    in_pixelonics = (
+        db.query(Application)
+        .filter(Application.status.in_(["submitted", "under_review", "pending_ops_review"]))
         .count()
     )
     in_review = (
@@ -37,6 +42,7 @@ def pandosoft_dashboard(
     rejected = db.query(Application).filter(Application.status == "rejected").count()
     return {
         "awaiting_review": awaiting,
+        "in_pixelonics_verification": in_pixelonics,
         "in_review": in_review,
         "approved": approved,
         "rejected": rejected,

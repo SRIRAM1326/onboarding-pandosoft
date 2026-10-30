@@ -116,6 +116,7 @@ interface OnboardingContextValue extends PersistedState {
     status: WalletVerificationStatus,
     note?: string
   ) => void;
+  forwardToPandosoft: (applicationId: string, notes?: string) => void;
   addInternalNote: (applicationId: string, body: string) => void;
   toggleOpsChecklist: (applicationId: string, key: string) => void;
   markNotificationRead: (id: string) => void;
@@ -463,7 +464,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           },
           sourceOfFundsCategory: "business_revenue",
           sourceOfFundsExplanation: "",
-          expectedVolumeRange: "₹1 crore – ₹5 crore per month",
+          expectedVolumeRange: "Γé╣1 crore ΓÇô Γé╣5 crore per month",
           expectedFrequency: "Weekly",
           tradingActivityDescription: "",
         },
@@ -811,7 +812,18 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             ...app,
             updatedAt: now,
             documents: app.documents.map((d) =>
-              d.id === documentId ? { ...d, status, reviewerNotes: notes ?? d.reviewerNotes } : d
+              d.id === documentId
+                ? {
+                    ...d,
+                    status,
+                    reviewerNotes:
+                      notes !== undefined
+                        ? notes
+                        : status === "verified_demo"
+                        ? "Verified by Pixelonics Operations"
+                        : d.reviewerNotes,
+                  }
+                : d
             ),
             auditTrail: [
               {
@@ -885,7 +897,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                 applicationReference: app.reference,
                 type: "correction_requested" as const,
                 label: "Correction Requested",
-                description: `${payload.reason} — ${payload.instructions}`,
+                description: `${payload.reason} ΓÇö ${payload.instructions}`,
                 actor: {
                   id: prev.currentUser.id,
                   name: prev.currentUser.name,
@@ -1023,6 +1035,11 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             ...app,
             status,
             decidedAt: status === "approved" || status === "rejected" ? now : app.decidedAt,
+            complianceReviewedAt: status === "approved" || status === "rejected" ? now : app.complianceReviewedAt,
+            complianceReviewNotes:
+              status === "approved" || status === "rejected"
+                ? (reason ?? app.complianceReviewNotes)
+                : app.complianceReviewNotes,
             decisionReason: reason ?? app.decisionReason,
             updatedAt: now,
             auditTrail: [
@@ -1102,6 +1119,75 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
+  const forwardToPandosoft = useCallback((applicationId: string, notes?: string) => {
+    setState((prev) => {
+      const now = new Date().toISOString();
+      const defaultNotes =
+        notes?.trim() ||
+        "All customer documents, details, wallets, and Video KYC verified by Pixelonics Operations. Forwarded to Pandosoft for final review.";
+      const apps = prev.applications.map((app) => {
+        if (app.id !== applicationId) return app;
+        return {
+          ...app,
+          status: "ready_for_compliance" as ApplicationStatus,
+          forwardedToPandosoftAt: now,
+          opsReviewedAt: now,
+          opsReviewNotes: defaultNotes,
+          assignedReviewerId: "usr-pan-rev-1",
+          updatedAt: now,
+          auditTrail: [
+            {
+              id: `audit-${Date.now()}`,
+              applicationId: app.id,
+              applicationReference: app.reference,
+              type: "decision_recorded" as const,
+              label: "Verified by Pixelonics — Forwarded to Pandosoft",
+              description: defaultNotes,
+              actor: {
+                id: prev.currentUser.id,
+                name: prev.currentUser.name,
+                role: prev.currentUser.role,
+              },
+              timestamp: now,
+              isDemo: true as const,
+            },
+            ...app.auditTrail,
+          ],
+        };
+      });
+
+      const updatedChecklists = {
+        ...prev.opsChecklists,
+        [applicationId]: {
+          completeness: true,
+          documentsUploaded: true,
+          signedAndStamped: true,
+          readyForCompliance: true,
+        },
+      };
+
+      return {
+        ...prev,
+        applications: apps,
+        opsChecklists: updatedChecklists,
+        notifications: [
+          {
+            id: `notif-${Date.now()}`,
+            userId: "usr-pan-rev-1",
+            applicationId,
+            kind: "status" as const,
+            title: "Application Forwarded for Final Review",
+            body: `Application has been verified by Pixelonics Operations and forwarded to Pandosoft for final review.`,
+            createdAt: now,
+            read: false,
+            href: `/pandosoft/applications/${applicationId}`,
+          },
+          ...prev.notifications,
+        ],
+      };
+    });
+  }, []);
+
   const scheduleVideoKyc = useCallback((applicationId: string, slotId: string) => {
     const slot = videoKycSlots.find((s) => s.id === slotId) ?? videoKycSlots[0];
     setState((prev) => {
@@ -1155,7 +1241,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             videoKyc: {
               ...app.videoKyc,
               status,
-              outcomeNote: note ?? app.videoKyc.outcomeNote,
+              outcomeNote: note ?? (status === "completed" ? "Verified by Pixelonics Operations" : app.videoKyc.outcomeNote),
             },
             auditTrail: [
               {
@@ -1365,7 +1451,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             updatedAt: now,
             wallets: app.wallets.map((w) =>
               w.id === walletId
-                ? { ...w, verificationStatus: status, verificationNote: note ?? w.verificationNote }
+                ? {
+                    ...w,
+                    verificationStatus: status,
+                    verificationNote:
+                      note ??
+                      (status === "verified_demo"
+                        ? "Verified by Pixelonics Operations"
+                        : w.verificationNote),
+                  }
                 : w
             ),
             auditTrail: [
@@ -1511,6 +1605,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       recordVideoKycOutcome,
       uploadVideoKyc,
       recordWalletVerification,
+      forwardToPandosoft,
       addInternalNote,
       toggleOpsChecklist,
       markNotificationRead,
@@ -1540,6 +1635,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       recordVideoKycOutcome,
       uploadVideoKyc,
       recordWalletVerification,
+      forwardToPandosoft,
       addInternalNote,
       toggleOpsChecklist,
       markNotificationRead,

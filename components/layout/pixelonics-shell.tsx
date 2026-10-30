@@ -7,6 +7,7 @@ import { BarChart3, ClipboardList, FileText, LogOut, Menu, PlusCircle, Shield, U
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { BrandLogo } from "@/components/ui/brand-logo";
 
 const navItems = [
   { href: "/pixelonics", label: "Operations Dashboard", icon: BarChart3 },
@@ -50,13 +51,8 @@ function PixelonicsShellContent({ children }: { children: React.ReactNode }) {
       <div className="flex">
         <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
           <div className="flex grow flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="flex h-16 items-center gap-2.5 px-6">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
-                alt="Pixelonics"
-                className="h-7 w-auto object-contain"
-              />
+            <div className="flex h-16 items-center px-6">
+              <BrandLogo href="/pixelonics" size="sm" />
             </div>
             <nav className="flex-1 space-y-1 px-3 py-4">
               {navItems.map((item) => {

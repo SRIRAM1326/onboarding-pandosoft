@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ApplicationStatusBadge } from "@/components/ui/status-badge";
 import { useOnboarding } from "@/lib/store/onboarding-store";
@@ -47,6 +48,7 @@ export default function PixelonicsApplicationsListPage() {
                 <TableHead>Reference</TableHead>
                 <TableHead>Business Name</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Verification Stage</TableHead>
                 <TableHead>Documents</TableHead>
                 <TableHead>Open Corrections</TableHead>
                 <TableHead>Actions</TableHead>
@@ -59,6 +61,20 @@ export default function PixelonicsApplicationsListPage() {
                   <TableCell>{app.businessName}</TableCell>
                   <TableCell>
                     <ApplicationStatusBadge status={app.status} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        app.status === "ready_for_compliance" || Boolean(app.forwardedToPandosoftAt)
+                          ? "border-indigo-400 text-indigo-600 bg-indigo-500/5 text-xs"
+                          : "border-amber-400 text-amber-600 bg-amber-500/5 text-xs"
+                      }
+                    >
+                      {app.status === "ready_for_compliance" || Boolean(app.forwardedToPandosoftAt)
+                        ? "Forwarded to Pandosoft"
+                        : "Pixelonics Review"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {app.documentProgress.verified}/{app.documentProgress.uploaded}

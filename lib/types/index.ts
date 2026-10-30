@@ -76,6 +76,7 @@ export type ApplicationStatus =
   | "submitted"
   | "under_review"
   | "action_required"
+  | "ready_for_compliance"
   | "approved"
   | "rejected";
 
@@ -437,6 +438,11 @@ export interface Application {
   decidedAt?: string;
   decisionReason?: string;
   assignedReviewerId?: string;
+  forwardedToPandosoftAt?: string;
+  opsReviewedAt?: string;
+  opsReviewNotes?: string;
+  complianceReviewedAt?: string;
+  complianceReviewNotes?: string;
   business: BusinessProfile;
   directors: Director[];
   signatory: AuthorizedSignatory;
@@ -463,6 +469,11 @@ export interface ApplicationSummary {
   updatedAt: string;
   submittedAt?: string;
   assignedReviewerId?: string;
+  forwardedToPandosoftAt?: string;
+  opsReviewedAt?: string;
+  opsReviewNotes?: string;
+  complianceReviewedAt?: string;
+  complianceReviewNotes?: string;
   assignedReviewerName?: string;
   documentProgress: { verified: number; uploaded: number; required: number };
   videoKycStatus: VideoKycStatus;

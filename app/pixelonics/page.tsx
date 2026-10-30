@@ -1,26 +1,32 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ApplicationStatusBadge } from "@/components/ui/status-badge";
 import { useOnboarding } from "@/lib/store/onboarding-store";
-import { FileCheck, Users, ClipboardList, Clock } from "lucide-react";
+import { FileCheck, Users, ClipboardList, Clock, Send, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function PixelonicsDashboard() {
   const { summaries, applications } = useOnboarding();
-  const pendingOps = summaries.filter((a) => a.status === "submitted" || a.status === "under_review").length;
+  const pendingVerification = summaries.filter(
+    (a) => a.status === "submitted" || a.status === "under_review"
+  ).length;
+  const forwardedToPandosoft = summaries.filter(
+    (a) => a.status === "ready_for_compliance" || Boolean(a.forwardedToPandosoftAt)
+  ).length;
   const openCorr = applications.reduce(
     (sum, a) => sum + a.corrections.filter((c) => c.status === "open").length,
     0
   );
-  const readyCount = summaries.filter((a) => a.status === "under_review" || a.status === "approved").length;
+  const approvedByPandosoft = summaries.filter((a) => a.status === "approved").length;
 
   const stats = [
-    { label: "Total Applications", value: summaries.length, icon: Users },
-    { label: "Pending Ops Review", value: pendingOps, icon: Clock },
-    { label: "Open Corrections", value: openCorr, icon: ClipboardList },
-    { label: "In Compliance Pipeline", value: readyCount, icon: FileCheck },
+    { label: "Pending Pixelonics Verification", value: pendingVerification, icon: Clock, color: "text-amber-600" },
+    { label: "Forwarded to Pandosoft", value: forwardedToPandosoft, icon: Send, color: "text-indigo-600" },
+    { label: "Open Corrections", value: openCorr, icon: ClipboardList, color: "text-rose-600" },
+    { label: "Approved by Pandosoft", value: approvedByPandosoft, icon: ShieldCheck, color: "text-emerald-600" },
   ];
 
   return (
@@ -29,7 +35,7 @@ export default function PixelonicsDashboard() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Pixelonics Operations Dashboard</h1>
           <p className="text-muted-foreground">
-            Pixelonics × Pandosoft India Private Limited — Operations Review
+            Pixelonics Team — Initial Document &amp; Detail Verification. Verified applications are forwarded to Pandosoft for final approval or rejection.
           </p>
         </div>
         <Button asChild>
@@ -48,7 +54,7 @@ export default function PixelonicsDashboard() {
                     <p className="text-xs text-muted-foreground">{stat.label}</p>
                     <p className="text-2xl font-semibold">{stat.value}</p>
                   </div>
-                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <Icon className={`h-5 w-5 ${stat.color || "text-muted-foreground"}`} />
                 </div>
               </CardContent>
             </Card>
@@ -58,29 +64,49 @@ export default function PixelonicsDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Applications Requiring Operations Review</CardTitle>
+          <CardTitle>Customer Applications — Initial Verification Queue</CardTitle>
+          <CardDescription>
+            Verify all customer documents, details, wallets, and Video KYC. Once verification is complete, forward to Pandosoft.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {summaries.map((app) => (
-              <div
-                key={app.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-              >
-                <div>
-                  <p className="font-medium">{app.reference}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {app.businessName} • {app.documentProgress.verified}/{app.documentProgress.uploaded} Docs Verified
-                  </p>
+            {summaries.map((app) => {
+              const isForwarded =
+                app.status === "ready_for_compliance" ||
+                Boolean(app.forwardedToPandosoftAt) ||
+                app.status === "approved" ||
+                app.status === "rejected";
+
+              return (
+                <div
+                  key={app.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:border-primary/40 transition-colors"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{app.reference}</p>
+                      {isForwarded && (
+                        <Badge variant="outline" className="text-indigo-600 border-indigo-300 text-xs">
+                          Forwarded to Pandosoft
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {app.businessName} • {app.documentProgress.verified}/{app.documentProgress.uploaded} Docs Verified
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ApplicationStatusBadge status={app.status} />
+                    <Button size="sm" asChild>
+                      <Link href={`/pixelonics/applications/${app.id}`}>
+                        {isForwarded ? "View Details" : "Review & Verify"}
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <ApplicationStatusBadge status={app.status} />
-                  <Button size="sm" asChild>
-                    <Link href={`/pixelonics/applications/${app.id}`}>Review</Link>
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

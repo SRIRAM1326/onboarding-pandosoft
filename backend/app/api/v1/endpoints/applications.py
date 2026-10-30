@@ -295,16 +295,25 @@ def review_application(
     now = datetime.now(timezone.utc)
     action = review_in.action
 
-    if action in ["approve_ops", "mark_ready_compliance"]:
+    if action in ["approve_ops", "mark_ready_compliance", "forward_to_pandosoft"]:
         application.status = ApplicationStatus.READY_FOR_COMPLIANCE.value
         application.ops_reviewed_at = now
-        application.ops_review_notes = review_in.notes
+        application.ops_review_notes = review_in.notes or "Verified by Pixelonics Operations and forwarded to Pandosoft for final review."
         application.ops_checklist = {
             "completeness": True,
             "documentsUploaded": True,
             "signedAndStamped": True,
             "readyForCompliance": True,
         }
+        notif = Notification(
+            user_id=application.customer_id,
+            application_id=application.id,
+            title="Application Verified & Forwarded to Pandosoft",
+            message=f"Your application {application.reference_number} has been verified by Pixelonics and forwarded to Pandosoft for final review.",
+            type=NotificationType.INFO,
+            link=f"/portal/applications/{application.id}",
+        )
+        db.add(notif)
     elif action == "request_corrections":
         application.status = ApplicationStatus.ACTION_REQUIRED.value
         if review_in.corrections:
@@ -376,12 +385,12 @@ def review_application(
         for w in wallets:
             if not review_in.subject_id or w.get("id") == review_in.subject_id:
                 w["verificationStatus"] = review_in.outcome or "verified_demo"
-                w["verificationNote"] = review_in.notes or "Verified by compliance"
+                w["verificationNote"] = review_in.notes or "Verified by Pixelonics Operations"
         application.wallets = wallets
     elif action == "record_video_kyc":
         vkyc = dict(application.video_kyc or {"durationMinutes": 15})
         vkyc["status"] = review_in.outcome or "completed"
-        vkyc["outcomeNote"] = review_in.notes or "Video KYC verified successfully"
+        vkyc["outcomeNote"] = review_in.notes or "Video KYC verified by Pixelonics Operations"
         application.video_kyc = vkyc
 
     application.updated_at = now

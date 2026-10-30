@@ -11,6 +11,7 @@ import {
   XCircle,
   ArrowRight,
   HelpCircle,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,16 +49,18 @@ export function ComplianceVerificationGate({
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [approvalNotes, setApprovalNotes] = useState("All required documents and KYC video verified by Compliance Officer.");
+  const [approvalNotes, setApprovalNotes] = useState(
+    "All customer documents, details, and KYC video verified by Pixelonics team. Approved by Pandosoft Compliance Officer for corporate trading activation."
+  );
 
   const report = validateApplicationForApproval(app, policy);
 
   const handleConfirmApprove = () => {
     if (!report.canApprove) {
-      toast.error("Cannot approve: All required documents and the KYC video must be verified first.");
+      toast.error("Cannot approve: All documents and details must be verified by Pixelonics and forwarded to Pandosoft first.");
       return;
     }
-    onApprove(approvalNotes.trim() || "Approved by Compliance Officer");
+    onApprove(approvalNotes.trim() || "Approved by Pandosoft Compliance Officer");
     setApproveDialogOpen(false);
   };
 
@@ -94,7 +97,7 @@ export function ComplianceVerificationGate({
             <div>
               <div className="flex items-center gap-2">
                 <CardTitle className="text-lg">
-                  Compliance Verification &amp; Decision Gate
+                  Pandosoft Final Review &amp; Decision Gate
                 </CardTitle>
                 <Badge className={
                   report.canApprove
@@ -102,14 +105,18 @@ export function ComplianceVerificationGate({
                     : "bg-amber-600 text-white"
                 }>
                   {report.canApprove
-                    ? "Eligible for Approval"
-                    : "Verification Required"}
+                    ? "Eligible for Final Decision"
+                    : report.isForwardedToPandosoft
+                    ? "Verification Pending"
+                    : "Awaiting Pixelonics Verification"}
                 </Badge>
               </div>
               <CardDescription className="mt-1">
                 {report.canApprove
-                  ? "All required KYC documents and the customer's Video KYC have been reviewed and verified by an officer. Onboarding may be completed."
-                  : "The officer must verify all uploaded documents and review the customer's KYC video before approving or rejecting this onboarding application."}
+                  ? "Pixelonics team has reviewed and verified all uploaded documents and customer details. Pandosoft team can now perform final review and approve or reject the application."
+                  : report.isForwardedToPandosoft
+                  ? "Pixelonics has forwarded this application, but some required documents or details are still pending verification."
+                  : "Initial document and detail verification is currently handled by the Pixelonics team. Once Pixelonics completes verification and forwards it, Pandosoft will perform the final approval or rejection."}
               </CardDescription>
             </div>
           </div>
@@ -128,7 +135,7 @@ export function ComplianceVerificationGate({
                   setApproveDialogOpen(true);
                 } else {
                   toast.error(
-                    "Approval blocked: Verify all required documents and review the KYC video first.",
+                    "Approval blocked: Initial verification must be completed by Pixelonics first.",
                     {
                       description: report.blockingReasons[0] || "Requirements incomplete.",
                     }
@@ -169,7 +176,7 @@ export function ComplianceVerificationGate({
                   <AlertCircle className="h-5 w-5 text-amber-500" />
                 )}
                 <span className="font-semibold text-sm">
-                  Required Documents Verification
+                  Pixelonics Document Verification
                 </span>
               </div>
               <Badge variant={report.allDocumentsVerified ? "default" : "outline"} className={
@@ -181,8 +188,8 @@ export function ComplianceVerificationGate({
 
             <p className="text-xs text-muted-foreground">
               {report.allDocumentsVerified
-                ? "✓ All required entity, signatory, financial and declaration documents are verified."
-                : `Officer must inspect and verify the remaining ${
+                ? "✓ All required entity, signatory, financial and declaration documents verified by Pixelonics team."
+                : `Pixelonics team must verify the remaining ${
                     report.missingRequiredSlots.length +
                     report.unverifiedRequiredDocs.length +
                     report.unverifiedAdditionalDocs.length
@@ -194,7 +201,7 @@ export function ComplianceVerificationGate({
               report.unverifiedAdditionalDocs.length > 0) && (
               <div className="space-y-1.5 pt-1 border-t border-border/40">
                 <p className="text-[11px] font-semibold text-muted-foreground">
-                  Documents Pending Officer Verification:
+                  Documents Pending Pixelonics Verification:
                 </p>
                 <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
                   {[...report.unverifiedRequiredDocs, ...report.unverifiedAdditionalDocs]
@@ -215,56 +222,43 @@ export function ComplianceVerificationGate({
                           onClick={() => onOpenDocument(doc)}
                         >
                           <FileSearch className="mr-1 h-3 w-3" />
-                          Review &amp; Verify
+                          Inspect Document
                         </Button>
                       </div>
                     ))}
-                  {report.unverifiedRequiredDocs.length +
-                    report.unverifiedAdditionalDocs.length >
-                    5 && (
-                    <p className="text-[10px] text-muted-foreground text-center">
-                      +{" "}
-                      {report.unverifiedRequiredDocs.length +
-                        report.unverifiedAdditionalDocs.length -
-                        5}{" "}
-                      more documents in Documents tab
-                    </p>
-                  )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* 2. VIDEO KYC VERIFICATION CHECKLIST */}
+          {/* 2. VIDEO KYC & WALLET VERIFICATION CHECKLIST */}
           <div className={`rounded-xl border p-4 space-y-2.5 bg-card ${
-            report.videoKycVerified
+            report.videoKycVerified && report.walletsVerified
               ? "border-emerald-500/40"
               : "border-amber-500/40"
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {report.videoKycVerified ? (
+                {report.videoKycVerified && report.walletsVerified ? (
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                 ) : (
                   <AlertCircle className="h-5 w-5 text-amber-500" />
                 )}
                 <span className="font-semibold text-sm">
-                  Customer KYC Video Review
+                  Pixelonics Video KYC &amp; Wallet Verification
                 </span>
               </div>
-              <Badge variant={report.videoKycVerified ? "default" : "outline"} className={
-                report.videoKycVerified ? "bg-emerald-600 text-white" : ""
+              <Badge variant={report.videoKycVerified && report.walletsVerified ? "default" : "outline"} className={
+                report.videoKycVerified && report.walletsVerified ? "bg-emerald-600 text-white" : ""
               }>
-                {report.videoKycVerified ? "Verified" : "Pending Officer Review"}
+                {report.videoKycVerified && report.walletsVerified ? "Verified" : "Pending Pixelonics"}
               </Badge>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {report.videoKycVerified
-                ? "✓ Customer Video KYC recording has been reviewed, declaration matched, and identity verified."
-                : report.videoKycRecorded
-                ? "Customer video declaration uploaded. Officer must review video playback and approve."
-                : "Customer has not yet recorded or uploaded their Video KYC declaration."}
+              {report.videoKycVerified && report.walletsVerified
+                ? "✓ Video KYC and crypto wallets have been verified by the Pixelonics team."
+                : "Pixelonics team must review customer KYC video and verify crypto wallets."}
             </p>
 
             {onOpenVideoKyc && (
@@ -277,9 +271,7 @@ export function ComplianceVerificationGate({
                   onClick={onOpenVideoKyc}
                 >
                   <Video className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                  {report.videoKycVerified
-                    ? "Watch Customer KYC Video"
-                    : "Review & Verify Customer KYC Video"}
+                  Watch Customer KYC Video
                   <ArrowRight className="ml-1.5 h-3 w-3" />
                 </Button>
               </div>
@@ -292,7 +284,7 @@ export function ComplianceVerificationGate({
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
             <p className="font-semibold flex items-center gap-1.5">
               <HelpCircle className="h-3.5 w-3.5 text-amber-600" />
-              Onboarding completion is locked until these compliance conditions are met:
+              Final Pandosoft approval is locked until initial verification is completed:
             </p>
             <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
               {report.blockingReasons.map((r, i) => (
@@ -307,35 +299,44 @@ export function ComplianceVerificationGate({
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Application Approval</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              Pandosoft Final Regulatory Approval
+            </DialogTitle>
             <DialogDescription>
-              All {report.totalVerified} required documents and the customer Video KYC have been verified. Approving will activate this corporate trading client.
+              Confirm corporate account approval based on verified information from the Pixelonics team. This activates trading permissions for {app.business.legalName}.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-2">
-            <label className="text-xs font-semibold">Compliance Approval Notes</label>
-            <Textarea
-              value={approvalNotes}
-              onChange={(e) => setApprovalNotes(e.target.value)}
-              placeholder="Enter final approval comments or conditions..."
-              rows={3}
-            />
+
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1">
+              <p className="font-medium">Verification Summary:</p>
+              <p className="text-muted-foreground">• Documents: {report.totalVerified}/{report.totalRequired} verified by Pixelonics</p>
+              <p className="text-muted-foreground">• Video KYC: Verified by Pixelonics</p>
+              <p className="text-muted-foreground">• Entity &amp; Wallets: Verified by Pixelonics</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold">Pandosoft Compliance Approval Remarks *</label>
+              <Textarea
+                rows={3}
+                value={approvalNotes}
+                onChange={(e) => setApprovalNotes(e.target.value)}
+                placeholder="Enter final approval confirmation and compliance sign-off remarks..."
+                className="text-xs resize-none"
+              />
+            </div>
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setApproveDialogOpen(false)}
-            >
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
               Cancel
             </Button>
             <Button
-              type="button"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
               onClick={handleConfirmApprove}
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Confirm &amp; Complete Onboarding
+              Confirm Final Approval &amp; Activate
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -345,37 +346,37 @@ export function ComplianceVerificationGate({
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Onboarding Application</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Reject Onboarding Application
+            </DialogTitle>
             <DialogDescription>
-              Specify the compliance or regulatory grounds for rejecting this onboarding application. The customer will be formally notified.
+              Are you sure you want to reject application {app.reference}? This will terminate onboarding for {app.business.legalName}.
             </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-2 py-2">
-            <label className="text-xs font-semibold">
-              Rejection Justification / Reason *
-            </label>
+            <label className="text-xs font-semibold">Rejection Justification / Reason *</label>
             <Textarea
+              rows={4}
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="e.g. Failed AML source-of-funds screening, fraudulent documentation, or unverified identity..."
-              rows={4}
+              placeholder="State clear regulatory justification for rejection (e.g. sanctions list match, high AML risk, fraudulent documentation)..."
+              className="text-xs resize-none"
               required
             />
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setRejectDialogOpen(false)}
-            >
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
               Cancel
             </Button>
             <Button
-              type="button"
               variant="destructive"
               onClick={handleConfirmReject}
+              disabled={!rejectionReason.trim()}
             >
-              Confirm Rejection
+              Confirm Final Rejection
             </Button>
           </DialogFooter>
         </DialogContent>

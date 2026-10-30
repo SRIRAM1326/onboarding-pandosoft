@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { useOnboarding } from "@/lib/store/onboarding-store";
 import { toast } from "sonner";
 
@@ -46,13 +47,8 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mb-3 flex justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.png"
-              alt="Pixelonics"
-              className="h-9 w-auto object-contain"
-            />
+          <div className="mb-4 flex justify-center">
+            <BrandLogo size="lg" align="center" />
           </div>
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>Register for Pixelonics corporate onboarding</CardDescription>

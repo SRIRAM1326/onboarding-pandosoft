@@ -22,7 +22,8 @@ import type {
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   draft: "Draft",
   submitted: "Submitted",
-  under_review: "Under Review",
+  under_review: "Pixelonics Verification",
+  ready_for_compliance: "Forwarded to Pandosoft",
   action_required: "Action Required",
   approved: "Approved",
   rejected: "Rejected",

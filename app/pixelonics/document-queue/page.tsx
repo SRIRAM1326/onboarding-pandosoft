@@ -29,7 +29,7 @@ export default function PixelonicsDocumentQueuePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Document Queue</h1>
         <p className="text-muted-foreground">
-          Pixelonics Operations first-level document screening: View and review all document formats (Images, PDFs, and Word)
+          Pixelonics Operations initial document verification queue: Review and verify all customer document formats (Images, PDFs, and Word) before forwarding application to Pandosoft
         </p>
       </div>
 
