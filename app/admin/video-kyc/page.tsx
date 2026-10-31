@@ -37,10 +37,10 @@ export default function VideoKycPage() {
         <CardContent>
           <div className="rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed space-y-3">
             <p className="text-muted-foreground">
-              &ldquo;My name is [Full Name], authorized representative of [Your Company Name], completing the Video KYC on [Date] for our GK Enterprises trading account. The Company PAN is [Company PAN], my PAN is [Personal PAN], and the registered email is [Email ID]. This is my wallet ID: [Wallet ID Number].
+              &ldquo;My name is [Full Name], authorized representative of [Your Company Name], completing the Video KYC on [Date] for our Pandosoft trading account. The Company PAN is [Company PAN], my PAN is [Personal PAN], and the registered email is [Email ID]. This is my wallet ID: [Wallet ID Number].
             </p>
             <p className="text-muted-foreground">
-              I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify GK Enterprises against any false declarations made by us.&rdquo;
+              I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify Pandosoft against any false declarations made by us.&rdquo;
             </p>
           </div>
         </CardContent>
@@ -88,7 +88,7 @@ export default function VideoKycPage() {
                       recordVideoKycOutcome(
                         app.id,
                         "action_required",
-                        "Please re-record Video KYC reading the full GK Enterprises declaration script clearly."
+                        "Please re-record Video KYC reading the full Pandosoft declaration script clearly."
                       );
                       toast.warning("Requested Video KYC re-recording");
                     }}

@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export const RAW_VIDEO_KYC_TEMPLATE = `My name is [Full Name], authorized representative of [Your Company Name], completing the Video KYC on [Date] for our GK Enterprises trading account. The Company PAN is [Company PAN], my PAN is [Personal PAN], and the registered email is [Email ID]. This is my wallet ID: [Wallet ID Number]. 
-I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify GK Enterprises against any false declarations made by us.`;
+export const RAW_VIDEO_KYC_TEMPLATE = `My name is [Full Name], authorized representative of [Your Company Name], completing the Video KYC on [Date] for our Pandosoft trading account. The Company PAN is [Company PAN], my PAN is [Personal PAN], and the registered email is [Email ID]. This is my wallet ID: [Wallet ID Number]. 
+I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify Pandosoft against any false declarations made by us.`;
 
 export function buildPrefilledVideoKycScript(app: Application): string {
   const fullName = app.signatory.fullName?.trim() || "[Full Name]";
@@ -36,8 +36,8 @@ export function buildPrefilledVideoKycScript(app: Application): string {
   const emailId = app.signatory.email?.trim() || app.business.email?.trim() || "[Email ID]";
   const walletId = app.wallets[0]?.address?.trim() || "[Wallet ID Number]";
 
-  return `My name is ${fullName}, authorized representative of ${companyName}, completing the Video KYC on ${dateStr} for our GK Enterprises trading account. The Company PAN is ${companyPan}, my PAN is ${personalPan}, and the registered email is ${emailId}. This is my wallet ID: ${walletId}. 
-I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify GK Enterprises against any false declarations made by us.`;
+  return `My name is ${fullName}, authorized representative of ${companyName}, completing the Video KYC on ${dateStr} for our Pandosoft trading account. The Company PAN is ${companyPan}, my PAN is ${personalPan}, and the registered email is ${emailId}. This is my wallet ID: ${walletId}. 
+I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify Pandosoft against any false declarations made by us.`;
 }
 
 interface VideoKycRecorderProps {
@@ -319,7 +319,7 @@ export function VideoKycRecorder({
                   })
                 : "[Date]"}
             </span>{" "}
-            for our GK Enterprises trading account. The Company PAN is{" "}
+            for our Pandosoft trading account. The Company PAN is{" "}
             <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono font-semibold text-primary">
               {showPrefilled ? app.business.pan?.trim() || "[Company PAN]" : "[Company PAN]"}
             </span>
@@ -346,7 +346,7 @@ export function VideoKycRecorder({
             Authorization Letter. We are the rightful owners of this account, and all funds used are
             from legitimate and lawful sources. These funds are not customer funds, borrowed funds,
             or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we
-            indemnify GK Enterprises against any false declarations made by us.&rdquo;
+            indemnify Pandosoft against any false declarations made by us.&rdquo;
           </p>
         </div>
       </div>

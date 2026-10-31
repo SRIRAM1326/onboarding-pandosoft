@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "cn";
 
 interface BrandLogoProps {
@@ -8,12 +9,35 @@ interface BrandLogoProps {
   href?: string;
 }
 
+const sizeConfig = {
+  sm: {
+    width: 90,
+    height: 33,
+    imgClass: "h-7 sm:h-8",
+    textClass: "text-[9px] mt-0.5",
+  },
+  md: {
+    width: 118,
+    height: 44,
+    imgClass: "h-9 sm:h-10",
+    textClass: "text-[10px] mt-1",
+  },
+  lg: {
+    width: 180,
+    height: 67,
+    imgClass: "h-14 sm:h-16",
+    textClass: "text-xs mt-1.5",
+  },
+};
+
 export function BrandLogo({
   size = "md",
   align = "left",
   className,
   href,
 }: BrandLogoProps) {
+  const config = sizeConfig[size];
+
   const content = (
     <div
       className={cn(
@@ -22,25 +46,22 @@ export function BrandLogo({
         className
       )}
     >
+      <Image
+        src="/pandosoft-logo.png"
+        alt="Pandosoft India Private Limited"
+        width={config.width}
+        height={config.height}
+        priority
+        style={{ width: "auto" }}
+        className={cn("object-contain shrink-0", config.imgClass)}
+      />
       <span
         className={cn(
-          "font-black tracking-widest text-foreground font-mono leading-none",
-          size === "sm" && "text-base tracking-wider",
-          size === "md" && "text-lg tracking-widest",
-          size === "lg" && "text-2xl sm:text-3xl tracking-[0.2em]"
+          "font-medium text-muted-foreground whitespace-nowrap tracking-tight",
+          config.textClass
         )}
       >
-        PANDOSOFT
-      </span>
-      <span
-        className={cn(
-          "font-bold uppercase tracking-[0.18em] text-muted-foreground",
-          size === "sm" && "text-[8px] mt-0.5",
-          size === "md" && "text-[9px] mt-1",
-          size === "lg" && "text-[11px] mt-1.5"
-        )}
-      >
-        POWERED BY PIXELONICS
+        Powered by Pixelonics
       </span>
     </div>
   );
@@ -55,3 +76,4 @@ export function BrandLogo({
 
   return content;
 }
+

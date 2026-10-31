@@ -23,6 +23,7 @@ import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandLogo } from "@/components/ui/brand-logo";
+import { DashboardFooter } from "@/components/layout/dashboard-footer";
 import { currentMockStaffUser } from "@/lib/mock-data/users";
 
 const navItems = [
@@ -146,8 +147,9 @@ function AdminShellContent({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main className="flex-1 lg:pl-72">
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+        <main className="flex-1 lg:pl-72 flex flex-col min-h-[calc(100vh-4rem)]">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 flex-1">{children}</div>
+          <DashboardFooter />
         </main>
       </div>
     </div>

@@ -1,3 +1,6 @@
+import type { BharatOcrScanResult } from "./bharat-ocr";
+export * from "./bharat-ocr";
+
 /**
  * Pixelonics Client Onboarding Portal — domain types.
  *
@@ -259,6 +262,7 @@ export interface ApplicationDocument {
    */
   previewUrl?: string;
   history: DocumentVersion[];
+  bharatOcr?: BharatOcrScanResult;
 }
 
 /** Alias requested by the specification. `ApplicationDocument` avoids clashing with the DOM `Document`. */

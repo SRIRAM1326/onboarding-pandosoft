@@ -22,7 +22,9 @@ import {
   Clock,
   Layers,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
+import { BharatOcrCard } from "@/components/documents/bharat-ocr-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +49,14 @@ interface DocumentViewerModalProps {
   onClose: () => void;
   onVerify?: (docId: string, notes?: string) => void;
   onReject?: (docId: string, notes?: string) => void;
+  onVerifyBharatOcr?: (
+    docId: string,
+    options: {
+      confirmChanges: boolean;
+      verifiedFields: Record<string, string>;
+      notes: string;
+    }
+  ) => void;
   application?: Application;
   allDocuments?: ApplicationDocument[];
   onSelectDocument?: (doc: ApplicationDocument) => void;
@@ -59,6 +69,7 @@ export function DocumentViewerModal({
   onClose,
   onVerify,
   onReject,
+  onVerifyBharatOcr,
   application,
   allDocuments,
   onSelectDocument,
@@ -72,6 +83,7 @@ export function DocumentViewerModal({
   const [pdfFrameError, setPdfFrameError] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"file" | "paper" | "vector">("file");
+  const [panelTab, setPanelTab] = useState<"ocr" | "notes">("ocr");
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [loadingText, setLoadingText] = useState<boolean>(false);
 
@@ -740,78 +752,126 @@ export function DocumentViewerModal({
           </div>
 
           {/* RIGHT / BOTTOM REVIEW PANEL */}
-          <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l bg-card flex flex-col justify-between p-5 space-y-4 overflow-y-auto">
+          <div className="w-full lg:w-[460px] border-t lg:border-t-0 lg:border-l bg-card flex flex-col justify-between p-4 sm:p-5 space-y-4 overflow-y-auto">
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-foreground">Officer Verification</p>
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Carefully review entity names, registration identifiers, signatures, and compliance seals.
-                </p>
+              {/* TABS: BharatOCR vs Officer Notes */}
+              <div className="flex rounded-lg border bg-muted/40 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPanelTab("ocr")}
+                  className={`flex-1 py-1 px-2.5 rounded-md font-medium flex items-center justify-center gap-1.5 transition-all ${
+                    panelTab === "ocr"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  BharatOCR Verification
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPanelTab("notes")}
+                  className={`flex-1 py-1 px-2.5 rounded-md font-medium flex items-center justify-center gap-1.5 transition-all ${
+                    panelTab === "notes"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                  Officer Notes
+                </button>
               </div>
 
-              {/* STATUS INDICATOR */}
-              <div className="rounded-xl border bg-muted/20 p-3.5 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Review Status</span>
-                  <Badge className={statusBadgeVariant(currentDoc.status)}>
-                    {DOCUMENT_STATUS_LABELS[currentDoc.status]}
-                  </Badge>
-                </div>
-                {currentDoc.status === "verified_demo" ? (
-                  <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Verified by Compliance Officer
-                  </p>
-                ) : (
-                  <p className="text-xs text-amber-600 font-medium flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    Pending Officer Verification
-                  </p>
-                )}
-              </div>
+              {panelTab === "ocr" ? (
+                /* BHARAT OCR CARD */
+                <BharatOcrCard
+                  document={currentDoc}
+                  application={application}
+                  isPixelonicsOfficer={isOfficer}
+                  onVerifyBharatOcr={(opts) => {
+                    if (onVerifyBharatOcr) {
+                      onVerifyBharatOcr(currentDoc.id, opts);
+                    } else {
+                      onVerify?.(currentDoc.id, opts.notes);
+                    }
+                  }}
+                  onRequestReplacement={(notes) => onReject?.(currentDoc.id, notes)}
+                />
+              ) : (
+                /* MANUAL OFFICER NOTES & REVIEW PANEL */
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-semibold text-foreground">Officer Verification</p>
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Carefully review entity names, registration identifiers, signatures, and compliance seals.
+                    </p>
+                  </div>
 
-              {/* REVIEWER NOTES */}
-              {isOfficer && (
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-foreground">
-                    Officer Compliance Notes
-                  </label>
-                  <Textarea
-                    placeholder="Enter verification notes, check details, or specific reasons for replacement..."
-                    value={reviewerNotes}
-                    onChange={(e) => setReviewerNotes(e.target.value)}
-                    rows={4}
-                    className="text-xs resize-none"
-                  />
-                </div>
-              )}
+                  {/* STATUS INDICATOR */}
+                  <div className="rounded-xl border bg-muted/20 p-3.5 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Review Status</span>
+                      <Badge className={statusBadgeVariant(currentDoc.status)}>
+                        {DOCUMENT_STATUS_LABELS[currentDoc.status]}
+                      </Badge>
+                    </div>
+                    {currentDoc.status === "verified_demo" ? (
+                      <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Verified by Compliance Officer
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-600 font-medium flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        Pending Officer Verification
+                      </p>
+                    )}
+                  </div>
 
-              {/* VERSION HISTORY ACCORDION */}
-              {currentDoc.history && currentDoc.history.length > 1 && (
-                <div className="border rounded-lg p-2.5 space-y-1.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setShowHistory((v) => !v)}
-                    className="flex w-full items-center justify-between font-medium text-muted-foreground hover:text-foreground"
-                  >
-                    <span>Version History ({currentDoc.history.length})</span>
-                    <span className="text-[10px]">{showHistory ? "Hide" : "Show"}</span>
-                  </button>
-                  {showHistory && (
-                    <div className="space-y-1 pt-1.5 border-t border-border/40">
-                      {currentDoc.history.map((ver) => (
-                        <div key={ver.version} className="flex justify-between text-[11px] py-0.5">
-                          <span>
-                            v{ver.version} • {ver.fileName}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {new Date(ver.uploadedAt).toLocaleDateString()}
-                          </span>
+                  {/* REVIEWER NOTES */}
+                  {isOfficer && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-foreground">
+                        Officer Compliance Notes
+                      </label>
+                      <Textarea
+                        placeholder="Enter verification notes, check details, or specific reasons for replacement..."
+                        value={reviewerNotes}
+                        onChange={(e) => setReviewerNotes(e.target.value)}
+                        rows={4}
+                        className="text-xs resize-none"
+                      />
+                    </div>
+                  )}
+
+                  {/* VERSION HISTORY ACCORDION */}
+                  {currentDoc.history && currentDoc.history.length > 1 && (
+                    <div className="border rounded-lg p-2.5 space-y-1.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setShowHistory((v) => !v)}
+                        className="flex w-full items-center justify-between font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        <span>Version History ({currentDoc.history.length})</span>
+                        <span className="text-[10px]">{showHistory ? "Hide" : "Show"}</span>
+                      </button>
+                      {showHistory && (
+                        <div className="space-y-1 pt-1.5 border-t border-border/40">
+                          {currentDoc.history.map((ver) => (
+                            <div key={ver.version} className="flex justify-between text-[11px] py-0.5">
+                              <span>
+                                v{ver.version} • {ver.fileName}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {new Date(ver.uploadedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
@@ -819,7 +879,7 @@ export function DocumentViewerModal({
             </div>
 
             {/* ACTION BUTTONS */}
-            {isOfficer && (
+            {isOfficer && panelTab === "notes" && (
               <div className="space-y-2 pt-2 border-t">
                 <Button
                   type="button"

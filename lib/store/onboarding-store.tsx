@@ -37,6 +37,7 @@ import { appConfig } from "@/lib/config/env";
 import { saveVideoToIndexedDb } from "@/lib/utils/video-db";
 import { saveDocumentBlob } from "@/lib/utils/document-db";
 import { validateApplicationForApproval } from "@/lib/utils/verification-rules";
+import { scanDocumentWithBharatOcr } from "@/lib/utils/bharat-ocr-engine";
 import { toast } from "sonner";
 
 const STORAGE_KEY = "pixelonics_onboarding_state_v1";
@@ -122,12 +123,32 @@ interface OnboardingContextValue extends PersistedState {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   updatePolicy: (patch: Partial<CompliancePolicy>) => void;
+  verifyBharatOcrDetails: (
+    applicationId: string,
+    documentId: string,
+    options: {
+      confirmChanges?: boolean;
+      verifiedFields?: Record<string, string>;
+      notes?: string;
+    }
+  ) => void;
+  rescanDocumentWithBharatOcr: (
+    applicationId: string,
+    documentId: string,
+    rawTextOverride?: string
+  ) => void;
 }
 
 const initialState: PersistedState = {
   currentUser: currentMockUser,
   users: mockUsers,
-  applications: mockApplications,
+  applications: mockApplications.map((app) => ({
+    ...app,
+    documents: (app.documents || []).map((d) => ({
+      ...d,
+      bharatOcr: d.bharatOcr || scanDocumentWithBharatOcr(d, app),
+    })),
+  })),
   notifications: mockNotifications,
   policy: defaultCompliancePolicy,
   opsChecklists: {
@@ -649,8 +670,9 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       }
 
       const resolvedMime = detectDocumentMimeType(file.name, file.type);
+      const targetApp = stateRef.current.applications.find((a) => a.id === applicationId);
 
-      const newDoc: ApplicationDocument = {
+      const tempDoc: ApplicationDocument = {
         id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         applicationId,
         requirementKey: meta.requirementKey,
@@ -665,6 +687,13 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         status: "ready_for_review",
         reviewerNotes: "",
         previewUrl,
+        history: [],
+      };
+      const bocrScan = scanDocumentWithBharatOcr(tempDoc, targetApp);
+
+      const newDoc: ApplicationDocument = {
+        ...tempDoc,
+        bharatOcr: bocrScan,
         history: [
           {
             version: 1,
@@ -843,6 +872,131 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
               },
               ...app.auditTrail,
             ],
+          };
+        });
+        return { ...prev, applications: apps };
+      });
+    },
+    []
+  );
+
+  const verifyBharatOcrDetails = useCallback(
+    (
+      applicationId: string,
+      documentId: string,
+      options: {
+        confirmChanges?: boolean;
+        verifiedFields?: Record<string, string>;
+        notes?: string;
+      }
+    ) => {
+      setState((prev) => {
+        const now = new Date().toISOString();
+        const apps = prev.applications.map((app) => {
+          if (app.id !== applicationId) return app;
+          let updatedApp = { ...app };
+          const docIndex = updatedApp.documents.findIndex((d) => d.id === documentId);
+          if (docIndex < 0) return app;
+
+          const doc = updatedApp.documents[docIndex];
+          const prevBocr = doc.bharatOcr || scanDocumentWithBharatOcr(doc, app);
+
+          // Only update application fields if explicitly confirmed by officer!
+          // "Do not automatically change PAN or Aadhaar numbers without confirmation."
+          if (options.confirmChanges && options.verifiedFields) {
+            const { panNumber, aadhaarNumber, fullName, dateOfBirth } = options.verifiedFields;
+            if (doc.section === "signatory" || doc.requirementKey.includes("signatory")) {
+              updatedApp = {
+                ...updatedApp,
+                signatory: {
+                  ...updatedApp.signatory,
+                  ...(panNumber ? { pan: panNumber } : {}),
+                  ...(aadhaarNumber ? { idDocumentNumber: aadhaarNumber } : {}),
+                  ...(fullName ? { fullName } : {}),
+                  ...(dateOfBirth ? { dateOfBirth } : {}),
+                },
+              };
+            } else if (doc.section === "business" || doc.requirementKey.includes("business")) {
+              updatedApp = {
+                ...updatedApp,
+                business: {
+                  ...updatedApp.business,
+                  ...(panNumber ? { pan: panNumber } : {}),
+                  ...(fullName ? { legalName: fullName } : {}),
+                },
+              };
+            }
+          }
+
+          const updatedBocr = {
+            ...prevBocr,
+            overallStatus: "verified_match" as const,
+            pixelonicsVerification: {
+              isVerified: true,
+              verifiedBy: prev.currentUser.name,
+              verifiedAt: now,
+              reviewNotes: options.notes || "Verified by Pixelonics Operations",
+              changesConfirmed: Boolean(options.confirmChanges),
+            },
+          };
+
+          const updatedDoc: ApplicationDocument = {
+            ...doc,
+            status: "verified_demo",
+            reviewerNotes: options.notes || "Verified via BharatOCR by Pixelonics Operations",
+            bharatOcr: updatedBocr,
+          };
+
+          const nextDocs = [...updatedApp.documents];
+          nextDocs[docIndex] = updatedDoc;
+
+          return {
+            ...updatedApp,
+            updatedAt: now,
+            documents: nextDocs,
+            auditTrail: [
+              {
+                id: `audit-${Date.now()}`,
+                applicationId: app.id,
+                applicationReference: app.reference,
+                type: "document_reviewed" as const,
+                label: "BharatOCR Verified",
+                description: `${doc.label} verified by Pixelonics Ops${
+                  options.confirmChanges ? " (Changes explicitly confirmed to application)" : ""
+                }. ${options.notes || ""}`,
+                actor: {
+                  id: prev.currentUser.id,
+                  name: prev.currentUser.name,
+                  role: prev.currentUser.role,
+                },
+                timestamp: now,
+                isDemo: true as const,
+              },
+              ...app.auditTrail,
+            ],
+          };
+        });
+        return { ...prev, applications: apps };
+      });
+    },
+    []
+  );
+
+  const rescanDocumentWithBharatOcr = useCallback(
+    (applicationId: string, documentId: string, rawTextOverride?: string) => {
+      setState((prev) => {
+        const apps = prev.applications.map((app) => {
+          if (app.id !== applicationId) return app;
+          return {
+            ...app,
+            documents: app.documents.map((d) => {
+              if (d.id !== documentId) return d;
+              const freshScan = scanDocumentWithBharatOcr(d, app, rawTextOverride);
+              return {
+                ...d,
+                bharatOcr: freshScan,
+              };
+            }),
           };
         });
         return { ...prev, applications: apps };
@@ -1611,6 +1765,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       markNotificationRead,
       markAllNotificationsRead,
       updatePolicy,
+      verifyBharatOcrDetails,
+      rescanDocumentWithBharatOcr,
     }),
     [
       state,
@@ -1641,6 +1797,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       markNotificationRead,
       markAllNotificationsRead,
       updatePolicy,
+      verifyBharatOcrDetails,
+      rescanDocumentWithBharatOcr,
     ]
   );
 

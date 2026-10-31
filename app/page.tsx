@@ -90,7 +90,7 @@ export default function Home() {
       <footer className="border-t border-border/60 bg-[rgba(249,249,249,0.8)] backdrop-blur-2xl backdrop-saturate-180 dark:bg-[rgba(28,28,30,0.8)]">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-muted-foreground">
-            © 2026 Pixelonics. All rights reserved. Demo environment.
+            © 2026 Pandosoft India Private Limited | Technology &amp; Operations Partner: Groen Pixelonics Tech Solutions
           </p>
         </div>
       </footer>

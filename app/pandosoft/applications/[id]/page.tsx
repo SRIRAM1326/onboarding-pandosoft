@@ -33,6 +33,7 @@ import {
   Wallet as WalletIcon,
   ShieldCheck,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -314,6 +315,12 @@ export default function PandosoftApplicationReviewPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {doc.bharatOcr && (
+                    <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20 flex items-center gap-1">
+                      <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+                      {doc.bharatOcr.pixelonicsVerification.isVerified ? "OCR Verified" : "OCR Scanned"}
+                    </Badge>
+                  )}
                   <Badge variant={isVerified ? "default" : "outline"} className={isVerified ? "bg-emerald-600 text-white text-[10px]" : "text-[10px]"}>
                     {isVerified ? "Verified by Pixelonics" : DOCUMENT_STATUS_LABELS[doc.status]}
                   </Badge>

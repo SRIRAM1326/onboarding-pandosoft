@@ -12,6 +12,7 @@ import {
   Maximize2,
   Image as ImageIcon,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -308,6 +309,18 @@ export function DocumentUploader({
                 )}
               </div>
             </div>
+
+            {existingDocument?.bharatOcr && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-primary font-medium">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  <span>BharatOCR: {existingDocument.bharatOcr.documentTypeLabel} scanned</span>
+                </div>
+                <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
+                  Format Valid
+                </Badge>
+              </div>
+            )}
 
             {displayImageUrl && showPreview && (
               <div className="overflow-hidden rounded-lg border bg-muted/20 p-3">

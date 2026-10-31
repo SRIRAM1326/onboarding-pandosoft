@@ -47,7 +47,11 @@ import {
   Wallet as WalletIcon,
   CheckCircle2,
   AlertTriangle,
+  Sparkles,
+  HelpCircle,
+  Info,
 } from "lucide-react";
+import { BHARAT_OCR_DISCLAIMER } from "@/lib/utils/bharat-ocr-engine";
 import { toast } from "sonner";
 
 export default function PixelonicsApplicationReviewPage() {
@@ -57,6 +61,7 @@ export default function PixelonicsApplicationReviewPage() {
     opsChecklists,
     toggleOpsChecklist,
     reviewDocument,
+    verifyBharatOcrDetails,
     requestCorrection,
     recordWalletVerification,
     recordVideoKycOutcome,
@@ -587,6 +592,187 @@ export default function PixelonicsApplicationReviewPage() {
         </Card>
       </div>
 
+      {/* BHARAT OCR DOCUMENT SCANNING & VERIFICATION */}
+      <Card className="border-primary/25 shadow-sm">
+        <CardHeader className="bg-muted/20 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                BOCR
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-1.5">
+                  BharatOCR Document Scanning &amp; Identity Cross-Verification
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Automated OCR text extraction, format validation, character error detection, and customer details comparison
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/20 text-xs">
+                Pixelonics Verification Authority
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          {/* DISCLAIMER BANNER */}
+          <div className="rounded-xl border border-amber-300/80 bg-amber-50/60 dark:bg-amber-950/20 p-3.5 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+            <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-amber-800 dark:text-amber-300">
+                Important Compliance Rules:
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                {BHARAT_OCR_DISCLAIMER} Original files remain untouched. Extracted PAN, Aadhaar, and DOB values are cross-checked with customer application data. Numbers are never updated automatically without explicit officer confirmation.
+              </p>
+            </div>
+          </div>
+
+          {/* IDENTITY DOCUMENTS BHARAT OCR GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {app.documents
+              .filter((d) => {
+                const k = (d.requirementKey || "").toLowerCase();
+                return (
+                  k.includes("pan") ||
+                  k.includes("aadhaar") ||
+                  k.includes("identity") ||
+                  k.includes("incorporation") ||
+                  k.includes("gst")
+                );
+              })
+              .map((doc) => {
+                const bocr = doc.bharatOcr;
+                const isVerified = doc.status === "verified_demo" || bocr?.pixelonicsVerification?.isVerified;
+                const panField = bocr?.fields.panNumber;
+                const aadhaarField = bocr?.fields.aadhaarNumber;
+                const nameField = bocr?.fields.fullName;
+                const dobField = bocr?.fields.dateOfBirth;
+
+                const hasMismatch = bocr?.errorFlags.mismatched && bocr.errorFlags.mismatched.length > 0;
+                const hasUnclear = bocr?.errorFlags.unclear && bocr.errorFlags.unclear.length > 0;
+                const hasInvalid = bocr?.errorFlags.invalid && bocr.errorFlags.invalid.length > 0;
+
+                return (
+                  <div
+                    key={doc.id}
+                    className={`rounded-xl border p-4 space-y-3 transition-colors ${
+                      isVerified
+                        ? "border-emerald-300/80 bg-emerald-50/20 dark:bg-emerald-950/10"
+                        : hasMismatch || hasInvalid
+                        ? "border-rose-300/80 bg-rose-50/30 dark:bg-rose-950/20"
+                        : hasUnclear
+                        ? "border-amber-300/80 bg-amber-50/30 dark:bg-amber-950/20"
+                        : "border-border bg-card"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-foreground">{doc.label}</p>
+                          {isVerified ? (
+                            <Badge className="bg-emerald-600 text-white text-[10px]">
+                              ✓ Verified by Ops
+                            </Badge>
+                          ) : hasMismatch ? (
+                            <Badge className="bg-rose-600 text-white text-[10px]">
+                              ⚠ Mismatch Flagged
+                            </Badge>
+                          ) : hasUnclear ? (
+                            <Badge className="bg-amber-600 text-white text-[10px]">
+                              ? Unclear Character
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px]">
+                              ✓ Format Valid
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{doc.fileName}</p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1 shrink-0"
+                        onClick={() => setSelectedDoc(doc)}
+                      >
+                        <Eye className="h-3 w-3" />
+                        Inspect &amp; Verify
+                      </Button>
+                    </div>
+
+                    {/* EXTRACTED DETAILS SUMMARY */}
+                    <div className="space-y-1.5 text-xs bg-muted/30 rounded-lg p-2.5 font-mono">
+                      {nameField && (
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-muted-foreground font-sans">Name:</span>
+                          <span className="font-semibold text-foreground truncate max-w-[180px]">
+                            {nameField.extractedValue}
+                          </span>
+                        </div>
+                      )}
+                      {panField && (
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-muted-foreground font-sans">PAN:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold text-foreground">{panField.extractedValue}</span>
+                            {panField.formatValid ? (
+                              <span className="text-[10px] text-emerald-600 font-sans">✓ Valid</span>
+                            ) : (
+                              <span className="text-[10px] text-rose-600 font-sans">✕ Invalid</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {aadhaarField && (
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-muted-foreground font-sans">Aadhaar:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold text-foreground">{aadhaarField.extractedValue}</span>
+                            {aadhaarField.formatValid ? (
+                              <span className="text-[10px] text-emerald-600 font-sans">✓ Valid</span>
+                            ) : (
+                              <span className="text-[10px] text-rose-600 font-sans">✕ Invalid</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {dobField && (
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="text-muted-foreground font-sans">DOB:</span>
+                          <span className="font-semibold text-foreground">{dobField.extractedValue}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SUGGESTION / OCR MISREAD NOTICE IF ANY */}
+                    {panField && panField.detectedErrors.length > 0 && (
+                      <div className="rounded bg-amber-500/10 border border-amber-300/40 p-2 text-[11px] text-amber-900 dark:text-amber-200 space-y-0.5">
+                        <p className="font-medium flex items-center gap-1 text-amber-800 dark:text-amber-300">
+                          <Sparkles className="h-3 w-3" />
+                          Character Misread Detected:
+                        </p>
+                        <p>{panField.detectedErrors[0].reason}</p>
+                        {panField.suggestedValue && (
+                          <p className="font-mono text-primary font-semibold">
+                            Suggested: {panField.suggestedValue}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* SECTION 2: ALL CUSTOMER UPLOADED DOCUMENTS VERIFICATION */}
       <Card>
         <CardHeader>
@@ -789,6 +975,9 @@ export default function PixelonicsApplicationReviewPage() {
         }}
         onReject={(docId, notes) => {
           reviewDocument(app.id, docId, "replacement_required", notes);
+        }}
+        onVerifyBharatOcr={(docId, opts) => {
+          verifyBharatOcrDetails(app.id, docId, opts);
         }}
       />
     </div>
