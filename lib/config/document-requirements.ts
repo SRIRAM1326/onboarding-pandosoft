@@ -278,6 +278,15 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
 
   /* ------------------------------- Wallets ------------------------------ */
   {
+    key: "wallet_pan_selfie",
+    label: "Selfie Holding PAN Card & Wallet",
+    description: "Camera selfie holding your physical PAN card and device showing this wallet. Use zoom to ensure both are readable.",
+    section: "wallets",
+    scope: "wallet",
+    level: "required",
+    isRequired: () => true,
+  },
+  {
     key: "wallet_screenshot",
     label: "Wallet Dashboard Screenshot",
     description: "Screenshot showing the wallet address and label. Never include seed phrases or private keys.",

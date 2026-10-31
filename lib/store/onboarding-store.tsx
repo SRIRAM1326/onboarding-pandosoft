@@ -28,6 +28,7 @@ import type {
   IndividualSelfie,
   IndividualVideoKyc,
   BankAccount,
+  WalletPanSelfie,
 } from "@/lib/types";
 import {
   mockApplications,
@@ -156,6 +157,7 @@ interface OnboardingContextValue extends PersistedState {
   addBankAccount: (applicationId: string, account: Omit<BankAccount, "id">) => void;
   removeBankAccount: (applicationId: string, accountId: string) => void;
   setPrimaryBankAccount: (applicationId: string, accountId: string) => void;
+  saveWalletPanSelfie: (applicationId: string, walletId: string, selfie: WalletPanSelfie) => void;
 }
 
 const initialState: PersistedState = {
@@ -1988,6 +1990,69 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     [updateApplication]
   );
 
+  const saveWalletPanSelfie = useCallback(
+    (applicationId: string, walletId: string, selfie: WalletPanSelfie) => {
+      updateApplication(
+        applicationId,
+        (cur) => {
+          const updatedWallets = (cur.wallets || []).map((w) =>
+            w.id === walletId ? { ...w, panWalletSelfie: selfie } : w
+          );
+
+          const existingDocIdx = (cur.documents || []).findIndex(
+            (d) => d.requirementKey === "wallet_pan_selfie" && d.ownerRef === walletId
+          );
+
+          let updatedDocs = [...(cur.documents || [])];
+          if (existingDocIdx >= 0) {
+            updatedDocs[existingDocIdx] = {
+              ...updatedDocs[existingDocIdx],
+              status: "ready_for_review",
+              fileName: selfie.fileName || "PAN_Wallet_Selfie.jpg",
+              fileSize: selfie.fileSize || 450000,
+              uploadedAt: selfie.capturedAt,
+            };
+          } else {
+            const wallet = (cur.wallets || []).find((w) => w.id === walletId);
+            const newDoc: ApplicationDocument = {
+              id: `doc-${Date.now()}`,
+              applicationId,
+              requirementKey: "wallet_pan_selfie",
+              section: "wallets",
+              ownerRef: walletId,
+              label: `Selfie Holding PAN Card & Wallet - ${wallet?.label || "Wallet"}`,
+              fileName: selfie.fileName || "PAN_Wallet_Selfie.jpg",
+              fileSize: selfie.fileSize || 450000,
+              mimeType: "image/jpeg",
+              uploadedAt: selfie.capturedAt,
+              version: 1,
+              status: "ready_for_review",
+              reviewerNotes: `Zoom Level: ${selfie.zoomLevel || 1}x`,
+              history: [
+                {
+                  version: 1,
+                  fileName: selfie.fileName || "PAN_Wallet_Selfie.jpg",
+                  fileSize: selfie.fileSize || 450000,
+                  uploadedAt: selfie.capturedAt,
+                  status: "ready_for_review",
+                },
+              ],
+            };
+            updatedDocs.push(newDoc);
+          }
+
+          return {
+            ...cur,
+            wallets: updatedWallets,
+            documents: updatedDocs,
+          };
+        },
+        `Saved PAN & Wallet Camera Selfie`
+      );
+    },
+    [updateApplication]
+  );
+
   const summaries = useMemo(
     () => state.applications.map(computeApplicationSummary),
     [state.applications]
@@ -2035,6 +2100,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       addBankAccount,
       removeBankAccount,
       setPrimaryBankAccount,
+      saveWalletPanSelfie,
     }),
     [
       state,
@@ -2076,6 +2142,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       addBankAccount,
       removeBankAccount,
       setPrimaryBankAccount,
+      saveWalletPanSelfie,
     ]
   );
 

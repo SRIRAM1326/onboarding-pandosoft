@@ -6,6 +6,7 @@ import Link from "next/link";
 import { WizardProgress } from "@/components/onboarding/wizard-progress";
 import { VideoKycRecorder } from "@/components/onboarding/video-kyc-recorder";
 import { GeoSelfieRecorder } from "@/components/onboarding/geo-selfie-recorder";
+import { WalletPanSelfieCamera } from "@/components/onboarding/wallet-pan-selfie-camera";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +80,7 @@ export default function WizardStepPage() {
     addBankAccount,
     removeBankAccount,
     setPrimaryBankAccount,
+    saveWalletPanSelfie,
     policy,
     hydrated,
   } = useOnboarding();
@@ -379,7 +381,7 @@ export default function WizardStepPage() {
             {stepNum === 2 && "Details and identity verification of the authorized corporate signatory"}
             {stepNum === 3 && `Declare all Ultimate Beneficial Owners with ≥${policy.uboThresholdPercent}% ownership`}
             {stepNum === 4 && "Corporate bank account details, expected volume, and source of funds"}
-            {stepNum === 5 && "Register and verify corporate cryptocurrency wallets"}
+            {stepNum === 5 && "Register corporate crypto wallets and capture camera selfie holding physical PAN card & wallet screen"}
             {stepNum === 6 && "Download, sign & acknowledge corporate declarations and record or upload your Video KYC"}
             {stepNum === 7 && "Review all sections and submit your onboarding application"}
           </CardDescription>
@@ -1394,54 +1396,76 @@ export default function WizardStepPage() {
           {/* STEP 5: WALLETS */}
           {stepNum === 5 && (
             <>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {app.wallets.map((w, idx) => {
                   const walletSlots = sectionSlots.filter((s) => s.ownerRef === w.id);
                   return (
-                    <div key={w.id} className="rounded-lg border p-4 space-y-4">
-                      <div className="flex items-start justify-between">
+                    <div key={w.id} className="rounded-xl border bg-card p-5 space-y-5 shadow-2xs">
+                      {/* WALLET HEADER */}
+                      <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
                         <div>
-                          <p className="font-medium">
-                            Wallet {idx + 1}: {w.label}
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-base text-foreground">
+                              Wallet {idx + 1}: {w.label}
+                            </p>
+                            <Badge variant="outline">{WALLET_STATUS_LABELS[w.verificationStatus]}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Network: <span className="font-medium text-foreground">{w.network ? NETWORK_LABELS[w.network] : "-"}</span> • Type: <span className="font-medium text-foreground">{w.walletType ? WALLET_TYPE_LABELS[w.walletType] : "-"}</span>
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {w.network ? NETWORK_LABELS[w.network] : "-"} •{" "}
-                            {w.walletType ? WALLET_TYPE_LABELS[w.walletType] : "-"}
+                          <p className="mt-1 font-mono text-xs text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/20 inline-block">
+                            {w.address}
                           </p>
-                          <p className="mt-1 font-mono text-xs">{w.address}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{WALLET_STATUS_LABELS[w.verificationStatus]}</Badge>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => handleRemoveWallet(w.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                          onClick={() => handleRemoveWallet(w.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
 
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {walletSlots.map((slot) => (
-                          <DocumentUploader
-                            key={`${slot.requirement.key}-${w.id}`}
-                            label={`${slot.label} (${w.label})`}
-                            description={slot.requirement.description}
-                            required={slot.required}
-                            existingDocument={slot.document}
-                            onUpload={(file) =>
-                              uploadDocument(app.id, file, {
-                                requirementKey: slot.requirement.key,
-                                section: "wallets",
-                                ownerRef: w.id,
-                                label: `${slot.label} - ${w.label}`,
-                              })
-                            }
-                          />
-                        ))}
+                      {/* CAMERA SELFIE: HOLDING PAN CARD & WALLET SCREEN */}
+                      <div className="space-y-2">
+                        <WalletPanSelfieCamera
+                          walletId={w.id}
+                          walletLabel={w.label}
+                          walletAddress={w.address}
+                          existingSelfie={w.panWalletSelfie}
+                          onSaveSelfie={(selfie) => saveWalletPanSelfie(app.id, w.id, selfie)}
+                        />
+                      </div>
+
+                      {/* OTHER WALLET DOCUMENTS */}
+                      <div className="space-y-3 pt-2 border-t">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Additional Wallet Verification Documents ({w.label})
+                        </p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {walletSlots
+                            .filter((s) => s.requirement.key !== "wallet_pan_selfie")
+                            .map((slot) => (
+                              <DocumentUploader
+                                key={`${slot.requirement.key}-${w.id}`}
+                                label={`${slot.label} (${w.label})`}
+                                description={slot.requirement.description}
+                                required={slot.required}
+                                conditionLabel={slot.requirement.conditionLabel}
+                                existingDocument={slot.document}
+                                onUpload={(file) =>
+                                  uploadDocument(app.id, file, {
+                                    requirementKey: slot.requirement.key,
+                                    section: "wallets",
+                                    ownerRef: w.id,
+                                    label: `${slot.label} - ${w.label}`,
+                                  })
+                                }
+                              />
+                            ))}
+                        </div>
                       </div>
                     </div>
                   );

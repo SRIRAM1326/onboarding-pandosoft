@@ -248,6 +248,16 @@ export type WalletVerificationStatus =
   | "verified_demo"
   | "action_required";
 
+export interface WalletPanSelfie {
+  id: string;
+  photoUrl: string;
+  fileName?: string;
+  fileSize?: number;
+  capturedAt: string;
+  zoomLevel?: number;
+  status: "pending" | "ready_for_review" | "verified_demo";
+}
+
 export interface Wallet {
   id: string;
   label: string;
@@ -258,6 +268,7 @@ export interface Wallet {
   verificationMethod: WalletVerificationMethod | "";
   verificationStatus: WalletVerificationStatus;
   verificationNote?: string;
+  panWalletSelfie?: WalletPanSelfie;
 }
 
 /* -------------------------------------------------------------------------- */

@@ -918,30 +918,79 @@ export default function AdminApplicationReviewPage() {
             <CardHeader>
               <CardTitle>Corporate Crypto Wallets</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {app.wallets.map((w) => (
-                <div key={w.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="font-medium">
-                      {w.label} ({w.network})
-                    </p>
-                    <p className="font-mono text-xs text-muted-foreground">{w.address}</p>
+            <CardContent className="space-y-4">
+              {app.wallets.map((w) => {
+                const panDoc = app.documents.find(
+                  (d) => d.requirementKey === "wallet_pan_selfie" && d.ownerRef === w.id
+                );
+                const selfieUrl = w.panWalletSelfie?.photoUrl || (panDoc ? panDoc.fileName : null);
+
+                return (
+                  <div key={w.id} className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {w.label} ({w.network})
+                        </p>
+                        <p className="font-mono text-xs text-muted-foreground">{w.address}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{WALLET_STATUS_LABELS[w.verificationStatus]}</Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            recordWalletVerification(app.id, w.id, "verified_demo", "Verified");
+                            toast.success(`Verified wallet ${w.label}`);
+                          }}
+                        >
+                          Verify Wallet
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* PAN & WALLET SELFIE CARD */}
+                    {w.panWalletSelfie || panDoc ? (
+                      <div className="flex items-center gap-3 rounded-lg border bg-background p-3">
+                        <img
+                          src={w.panWalletSelfie?.photoUrl || "/wallet-pan.jpg"}
+                          alt="PAN & Wallet Selfie"
+                          className="h-20 w-16 rounded-md object-cover border shrink-0 bg-slate-900 cursor-pointer"
+                          onClick={() => {
+                            if (panDoc) setSelectedDoc(panDoc);
+                            else window.open(w.panWalletSelfie?.photoUrl || "/wallet-pan.jpg", "_blank");
+                          }}
+                        />
+                        <div className="text-xs space-y-1">
+                          <div className="flex items-center gap-2 font-semibold text-foreground">
+                            <span>PAN Card &amp; Wallet Camera Selfie</span>
+                            <Badge variant="secondary" className="text-[10px]">
+                              {w.panWalletSelfie?.zoomLevel ? `${w.panWalletSelfie.zoomLevel}x Zoom` : "1.5x Zoom"}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Captured selfie showing authorized signatory face, physical PAN card, and live wallet address screen.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-5 p-0 text-xs text-primary font-medium"
+                            onClick={() => {
+                              if (panDoc) setSelectedDoc(panDoc);
+                              else window.open(w.panWalletSelfie?.photoUrl || "/wallet-pan.jpg", "_blank");
+                            }}
+                          >
+                            <Eye className="mr-1 h-3 w-3" /> Inspect High-Resolution Photo
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-amber-600 italic">No PAN + Wallet selfie recorded yet</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{WALLET_STATUS_LABELS[w.verificationStatus]}</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        recordWalletVerification(app.id, w.id, "verified_demo", "Verified");
-                        toast.success(`Verified wallet ${w.label}`);
-                      }}
-                    >
-                      Verify Wallet
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </TabsContent>
