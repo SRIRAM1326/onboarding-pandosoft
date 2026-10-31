@@ -7,7 +7,7 @@ import type {
 } from "@/lib/types";
 
 export type RequirementLevel = "required" | "conditional" | "optional";
-export type RequirementScope = "application" | "beneficial_owner" | "wallet";
+export type RequirementScope = "application" | "beneficial_owner" | "wallet" | "bank_account";
 
 export interface DocumentRequirement {
   key: string;
@@ -225,7 +225,7 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     label: "Cancelled Cheque",
     description: "Cancelled cheque of the account entered above, showing the entity name.",
     section: "financial",
-    scope: "application",
+    scope: "bank_account",
     level: "required",
     isRequired: () => true,
   },
@@ -234,7 +234,7 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     label: "Bank Statements",
     description: "Statements for the period required by the compliance policy.",
     section: "financial",
-    scope: "application",
+    scope: "bank_account",
     level: "required",
     isRequired: () => true,
   },
@@ -243,7 +243,7 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     label: "Business Income Proof",
     description: "ITR acknowledgement or CA-certified income statement.",
     section: "financial",
-    scope: "application",
+    scope: "bank_account",
     level: "required",
     isRequired: () => true,
   },
@@ -252,7 +252,7 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     label: "Financial Statements",
     description: "Latest audited balance sheet and profit & loss statement.",
     section: "financial",
-    scope: "application",
+    scope: "bank_account",
     level: "required",
     isRequired: () => true,
   },
@@ -261,7 +261,7 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     label: "GST Returns",
     description: "GSTR-3B returns for the most recent quarter.",
     section: "financial",
-    scope: "application",
+    scope: "bank_account",
     level: "conditional",
     conditionLabel: "Required when a GSTIN is provided",
     isRequired: (app) => app.business.gstin.trim().length > 0,
@@ -271,7 +271,7 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     label: "Supporting Trading Activity Evidence",
     description: "Optional: invoices, contracts or exchange statements supporting the declared activity.",
     section: "financial",
-    scope: "application",
+    scope: "bank_account",
     level: "optional",
     isRequired: () => false,
   },
@@ -373,7 +373,7 @@ export function getDocumentSlots(app: Application, policy: CompliancePolicy, sec
           document: findDocument(app.documents, requirement.key, owner.id),
         });
       }
-    } else {
+    } else if (requirement.scope === "wallet") {
       for (const wallet of app.wallets) {
         slots.push({
           requirement,
@@ -382,6 +382,25 @@ export function getDocumentSlots(app: Application, policy: CompliancePolicy, sec
           ownerLabel: wallet.label || "Unnamed wallet",
           required: requirement.isRequired(app, policy, wallet.id),
           document: findDocument(app.documents, requirement.key, wallet.id),
+        });
+      }
+    } else if (requirement.scope === "bank_account") {
+      const accounts =
+        app.financial.bankAccounts && app.financial.bankAccounts.length > 0
+          ? app.financial.bankAccounts
+          : [app.financial.bankAccount];
+      for (const acc of accounts) {
+        const accId = acc.id || "bank-1";
+        const accLabel = `${acc.bankName || "Bank"} (${acc.accountNumber ? `A/C ...${acc.accountNumber.slice(-4)}` : "Account"})`;
+        slots.push({
+          requirement,
+          label,
+          ownerRef: accId,
+          ownerLabel: accLabel,
+          required: requirement.isRequired(app, policy, accId),
+          document:
+            findDocument(app.documents, requirement.key, accId) ||
+            findDocument(app.documents, requirement.key),
         });
       }
     }

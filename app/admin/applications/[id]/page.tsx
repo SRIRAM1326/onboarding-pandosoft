@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApplicationStatusBadge } from "@/components/ui/status-badge";
 import {
+  BANK_ACCOUNT_TYPE_LABELS,
   DOCUMENT_STATUS_LABELS,
   ENTITY_TYPE_LABELS,
   SOURCE_OF_FUNDS_LABELS,
@@ -32,6 +33,10 @@ import {
   FileText,
   CheckCircle2,
   Database,
+  MapPin,
+  ExternalLink,
+  Camera,
+  Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -411,6 +416,60 @@ export default function AdminApplicationReviewPage() {
             </CardHeader>
 
             <CardContent className="space-y-6">
+              {/* DIRECTORS & UBOS COVERED BY THIS MASTER KYC */}
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold text-xs uppercase tracking-wider text-foreground">
+                    Directors &amp; Beneficial Owners (UBOs) Covered Under This Master Video KYC
+                  </span>
+                  <Badge variant="outline" className="text-xs bg-background">
+                    Single Session • Completed by Authorized Signatory ({app.signatory.fullName || "Signatory"})
+                  </Badge>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 text-xs">
+                  <div className="rounded-lg border bg-background p-3 space-y-1.5 shadow-2xs">
+                    <p className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                      Board of Directors ({(app.directors || []).length})
+                    </p>
+                    {(app.directors || []).length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {(app.directors || []).map((dir) => (
+                          <li key={dir.id} className="flex items-center justify-between font-medium text-foreground">
+                            <span>{dir.fullName}</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              ({dir.designation}{dir.identificationNumber ? ` • DIN: ${dir.identificationNumber}` : ""})
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground italic">Listed under company registration</p>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border bg-background p-3 space-y-1.5 shadow-2xs">
+                    <p className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                      Ultimate Beneficial Owners ({(app.beneficialOwners || []).length})
+                    </p>
+                    {(app.beneficialOwners || []).length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {(app.beneficialOwners || []).map((ubo) => (
+                          <li key={ubo.id} className="flex items-center justify-between font-medium text-foreground">
+                            <span>{ubo.fullName}</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              ({ubo.ownershipPercentage}% Ownership • {ubo.role})
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground italic">Listed under beneficial ownership</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* VIDEO PLAYER & SCRIPT COMPARISON */}
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* VIDEO PLAYER */}
@@ -511,6 +570,148 @@ export default function AdminApplicationReviewPage() {
                   </div>
                 </div>
               </div>
+
+              {/* DIRECTORS VERIFICATION PANEL */}
+              <div className="border-t pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-base flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      Directors Geo-Tagged Photos (GPS Map Camera) ({(app.directors || []).length})
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Inspect uploaded GPS Map Camera photos, stamped coordinates, timestamp, and face photo for each Board Director.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(app.directors || []).map((dir) => (
+                    <div key={dir.id} className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-sm">{dir.fullName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {dir.designation} • DIN: {dir.identificationNumber || "N/A"}
+                          </p>
+                        </div>
+                        <Badge variant={dir.selfie ? "default" : "outline"} className={dir.selfie ? "bg-emerald-600 text-white text-[11px]" : ""}>
+                          {dir.selfie ? "Photo Uploaded" : "Photo Pending"}
+                        </Badge>
+                      </div>
+
+                      {/* Photo & Geo info */}
+                      {dir.selfie ? (
+                        <div className="flex items-center gap-3 rounded-lg border bg-background p-2.5">
+                          <img
+                            src={dir.selfie.photoUrl}
+                            alt={dir.fullName}
+                            className="h-20 w-16 rounded-md object-cover border shrink-0 bg-slate-900 cursor-pointer"
+                            onClick={() => window.open(dir.selfie?.photoUrl, "_blank")}
+                          />
+                          <div className="text-xs space-y-1">
+                            <p className="font-medium flex items-center gap-1 text-primary">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              {dir.selfie.geoLocation
+                                ? `${dir.selfie.geoLocation.latitude}° N, ${dir.selfie.geoLocation.longitude}° E`
+                                : "GPS Coordinates Attached"}
+                            </p>
+                            {dir.selfie.geoLocation?.addressString && (
+                              <p className="text-[11px] text-muted-foreground">
+                                {dir.selfie.geoLocation.addressString}
+                              </p>
+                            )}
+                            {dir.selfie.geoLocation && (
+                              <a
+                                href={`https://www.google.com/maps?q=${dir.selfie.geoLocation.latitude},${dir.selfie.geoLocation.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                              >
+                                View on Google Maps
+                                <ExternalLink className="h-2.5 w-2.5" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-600 italic">No photo uploaded yet</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* UBO VERIFICATION PANEL */}
+              <div className="border-t pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-base flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      Beneficial Owners (UBO) Geo-Tagged Photos (GPS Map Camera) ({(app.beneficialOwners || []).length})
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Inspect uploaded GPS Map Camera photos, stamped coordinates, timestamp, and face photo for each UBO.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(app.beneficialOwners || []).map((ubo) => (
+                    <div key={ubo.id} className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-sm">{ubo.fullName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {ubo.ownershipPercentage}% Ownership • {ubo.role} • PAN: {ubo.pan}
+                          </p>
+                        </div>
+                        <Badge variant={ubo.selfie ? "default" : "outline"} className={ubo.selfie ? "bg-emerald-600 text-white text-[11px]" : ""}>
+                          {ubo.selfie ? "Photo Uploaded" : "Photo Pending"}
+                        </Badge>
+                      </div>
+
+                      {/* Photo & Geo info */}
+                      {ubo.selfie ? (
+                        <div className="flex items-center gap-3 rounded-lg border bg-background p-2.5">
+                          <img
+                            src={ubo.selfie.photoUrl}
+                            alt={ubo.fullName}
+                            className="h-20 w-16 rounded-md object-cover border shrink-0 bg-slate-900 cursor-pointer"
+                            onClick={() => window.open(ubo.selfie?.photoUrl, "_blank")}
+                          />
+                          <div className="text-xs space-y-1">
+                            <p className="font-medium flex items-center gap-1 text-primary">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              {ubo.selfie.geoLocation
+                                ? `${ubo.selfie.geoLocation.latitude}° N, ${ubo.selfie.geoLocation.longitude}° E`
+                                : "GPS Coordinates Attached"}
+                            </p>
+                            {ubo.selfie.geoLocation?.addressString && (
+                              <p className="text-[11px] text-muted-foreground">
+                                {ubo.selfie.geoLocation.addressString}
+                              </p>
+                            )}
+                            {ubo.selfie.geoLocation && (
+                              <a
+                                href={`https://www.google.com/maps?q=${ubo.selfie.geoLocation.latitude},${ubo.selfie.geoLocation.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                              >
+                                View on Google Maps
+                                <ExternalLink className="h-2.5 w-2.5" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-600 italic">No photo uploaded yet</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -576,33 +777,136 @@ export default function AdminApplicationReviewPage() {
         <TabsContent value="financial">
           <Card>
             <CardHeader>
-              <CardTitle>Financial &amp; Source of Funds</CardTitle>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    Financial &amp; Bank Accounts Profile
+                  </CardTitle>
+                  <CardDescription>
+                    Corporate banking facilities and corresponding verified supporting documents
+                  </CardDescription>
+                </div>
+                <Badge variant="outline">
+                  {((app.financial.bankAccounts && app.financial.bankAccounts.length > 0)
+                    ? app.financial.bankAccounts
+                    : [app.financial.bankAccount]
+                  ).length} Bank Account(s)
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Bank Name</span>
-                <span className="font-medium">{app.financial.bankAccount.bankName}</span>
+            <CardContent className="space-y-6">
+              {/* LIST OF BANK ACCOUNTS */}
+              <div className="space-y-4">
+                {((app.financial.bankAccounts && app.financial.bankAccounts.length > 0)
+                  ? app.financial.bankAccounts
+                  : [{ ...app.financial.bankAccount, id: app.financial.bankAccount.id || "bank-1", isPrimary: true }]
+                ).map((bank, idx) => {
+                  const bankId = bank.id || `bank-${idx + 1}`;
+                  const bankDocs = app.documents.filter(
+                    (d) => d.section === "financial" && (d.ownerRef === bankId || (!d.ownerRef && idx === 0))
+                  );
+
+                  return (
+                    <div key={bankId} className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">
+                              {bank.bankName || `Bank Account ${idx + 1}`}
+                            </span>
+                            {bank.isPrimary && (
+                              <Badge className="bg-primary text-primary-foreground text-[10px]">
+                                Primary Account
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-[10px]">
+                              {bank.accountType ? BANK_ACCOUNT_TYPE_LABELS[bank.accountType] : "Current"}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Account Holder: <span className="font-medium text-foreground">{bank.accountHolderName || app.business.legalName}</span>
+                          </p>
+                        </div>
+                        <div className="text-xs font-mono text-right">
+                          <p className="font-medium">{bank.accountNumber}</p>
+                          <p className="text-[11px] text-muted-foreground">IFSC: {bank.ifsc}</p>
+                        </div>
+                      </div>
+
+                      {/* Supporting Documents for this Bank */}
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Supporting Bank Documents ({bankDocs.length} uploaded):
+                        </p>
+                        {bankDocs.length > 0 ? (
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {bankDocs.map((doc) => (
+                              <div
+                                key={doc.id}
+                                className="flex items-center justify-between rounded-lg border bg-background p-2.5 text-xs shadow-2xs"
+                              >
+                                <div className="space-y-0.5 min-w-0 pr-2">
+                                  <p className="font-medium truncate">{doc.label}</p>
+                                  <p className="text-[11px] text-muted-foreground truncate">
+                                    {doc.fileName}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {DOCUMENT_STATUS_LABELS[doc.status]}
+                                  </Badge>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => setSelectedDoc(doc)}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-600 italic">No supporting documents uploaded for this account</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Account Number / IFSC</span>
-                <span>
-                  {app.financial.bankAccount.accountNumber} / {app.financial.bankAccount.ifsc}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Source of Funds</span>
-                <span>
-                  {app.financial.sourceOfFundsCategory
-                    ? SOURCE_OF_FUNDS_LABELS[app.financial.sourceOfFundsCategory]
-                    : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Expected Volume</span>
-                <span>{app.financial.expectedVolumeRange}</span>
-              </div>
-              <div className="pt-2">
-                <p className="text-muted-foreground">{app.financial.sourceOfFundsExplanation}</p>
+
+              {/* SOURCE OF FUNDS SUMMARY */}
+              <div className="rounded-xl border bg-background p-4 space-y-2 text-sm">
+                <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                  Source of Funds &amp; Activity
+                </p>
+                <div className="flex justify-between border-b pb-1.5 text-xs">
+                  <span className="text-muted-foreground">Category</span>
+                  <span className="font-medium">
+                    {app.financial.sourceOfFundsCategory
+                      ? SOURCE_OF_FUNDS_LABELS[app.financial.sourceOfFundsCategory]
+                      : "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b pb-1.5 text-xs">
+                  <span className="text-muted-foreground">Expected Volume</span>
+                  <span>{app.financial.expectedVolumeRange} ({app.financial.expectedFrequency})</span>
+                </div>
+                {app.financial.sourceOfFundsExplanation && (
+                  <div className="pt-1 text-xs">
+                    <span className="text-muted-foreground">Explanation:</span>
+                    <p className="text-muted-foreground mt-0.5">{app.financial.sourceOfFundsExplanation}</p>
+                  </div>
+                )}
+                {app.financial.tradingActivityDescription && (
+                  <div className="pt-1 text-xs">
+                    <span className="text-muted-foreground">Trading Activity:</span>
+                    <p className="text-muted-foreground mt-0.5">{app.financial.tradingActivityDescription}</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

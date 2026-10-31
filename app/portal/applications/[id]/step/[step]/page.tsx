@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { WizardProgress } from "@/components/onboarding/wizard-progress";
 import { VideoKycRecorder } from "@/components/onboarding/video-kyc-recorder";
+import { GeoSelfieRecorder } from "@/components/onboarding/geo-selfie-recorder";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { DocumentUploader } from "@/components/documents/document-uploader";
-import { getDocumentSlots } from "@/lib/config/document-requirements";
+import { getDocumentSlots, isSlotSatisfied } from "@/lib/config/document-requirements";
 import {
   BANK_ACCOUNT_TYPE_LABELS,
   ENTITY_TYPE_LABELS,
@@ -32,10 +33,12 @@ import {
 import { useOnboarding } from "@/lib/store/onboarding-store";
 import { downloadDeclarationDocument } from "@/lib/utils/document-generator";
 import type {
+  BankAccount,
   BankAccountType,
   BeneficialOwner,
   BlockchainNetwork,
   DeclarationKey,
+  Director,
   EntityType,
   IdentityDocumentType,
   SectionKey,
@@ -44,7 +47,7 @@ import type {
   WalletType,
   WalletVerificationMethod,
 } from "@/lib/types";
-import { ArrowLeft, ArrowRight, Save, Plus, Trash2, Download, CheckCircle2, FileText, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Plus, Trash2, Download, CheckCircle2, FileText, AlertCircle, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 const STEP_SECTIONS: Record<number, SectionKey> = {
@@ -69,12 +72,30 @@ export default function WizardStepPage() {
     submitApplication,
     uploadDocument,
     uploadVideoKyc,
+    saveDirectorSelfie,
+    saveUboSelfie,
+    addDirector,
+    removeDirector,
+    addBankAccount,
+    removeBankAccount,
+    setPrimaryBankAccount,
     policy,
     hydrated,
   } = useOnboarding();
 
   const app = getApplication(id);
   const [confirmSubmit, setConfirmSubmit] = useState(true);
+
+  // New Director form state
+  const [showAddDirector, setShowAddDirector] = useState(false);
+  const [newDirector, setNewDirector] = useState({
+    fullName: "",
+    designation: "Director",
+    identificationNumber: "",
+    pan: "",
+    email: "",
+    mobile: "",
+  });
 
   // New UBO form state
   const [showAddUbo, setShowAddUbo] = useState(false);
@@ -97,6 +118,18 @@ export default function WizardStepPage() {
     address: "",
     walletType: "self_custody_software" as WalletType,
     verificationMethod: "screenshot_review" as WalletVerificationMethod,
+  });
+
+  // New Bank Account form state
+  const [showAddBank, setShowAddBank] = useState(false);
+  const [newBank, setNewBank] = useState({
+    bankName: "",
+    accountHolderName: "",
+    accountNumber: "",
+    confirmAccountNumber: "",
+    ifsc: "",
+    accountType: "current" as BankAccountType,
+    isPrimary: false,
   });
 
   const sectionSlots = getDocumentSlots(app, policy, sectionKey);
@@ -216,6 +249,76 @@ export default function WizardStepPage() {
       "Removed Wallet"
     );
     toast.info("Removed wallet");
+  };
+
+  const handleAddBank = () => {
+    if (!newBank.bankName.trim()) {
+      toast.error("Please enter bank name");
+      return;
+    }
+    if (!newBank.accountHolderName.trim()) {
+      toast.error("Please enter account holder name");
+      return;
+    }
+    if (!newBank.accountNumber.trim()) {
+      toast.error("Please enter account number");
+      return;
+    }
+    if (newBank.accountNumber.trim() !== newBank.confirmAccountNumber.trim()) {
+      toast.error("Account numbers do not match");
+      return;
+    }
+    if (!newBank.ifsc.trim()) {
+      toast.error("Please enter bank IFSC code");
+      return;
+    }
+    addBankAccount(app.id, {
+      bankName: newBank.bankName.trim(),
+      accountHolderName: newBank.accountHolderName.trim(),
+      accountNumber: newBank.accountNumber.trim(),
+      ifsc: newBank.ifsc.trim().toUpperCase(),
+      accountType: newBank.accountType,
+      isPrimary: newBank.isPrimary,
+    });
+    setNewBank({
+      bankName: "",
+      accountHolderName: "",
+      accountNumber: "",
+      confirmAccountNumber: "",
+      ifsc: "",
+      accountType: "current",
+      isPrimary: false,
+    });
+    setShowAddBank(false);
+    toast.success("Bank account added! Please upload the corresponding supporting documents.");
+  };
+
+  const handleRemoveBank = (bankId: string) => {
+    removeBankAccount(app.id, bankId);
+    toast.info("Removed bank account");
+  };
+
+  const handleAddDirector = () => {
+    if (!newDirector.fullName.trim()) {
+      toast.error("Please enter director full name");
+      return;
+    }
+    addDirector(app.id, newDirector);
+    setNewDirector({
+      fullName: "",
+      designation: "Director",
+      identificationNumber: "",
+      pan: "",
+      email: "",
+      mobile: "",
+    });
+    setShowAddDirector(false);
+    toast.success("Director added successfully");
+  };
+
+  const handleRemoveDirector = (dirId: string) => {
+    removeDirector(app.id, dirId);
+    toast.info("Removed director");
   };
 
   const totalUboPercent = app.beneficialOwners.reduce((acc, u) => acc + (Number(u.ownershipPercentage) || 0), 0);
@@ -497,6 +600,148 @@ export default function WizardStepPage() {
                 </div>
               </div>
 
+              {/* DIRECTORS & DESIGNATED PARTNERS LIST */}
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      Directors &amp; Designated Partners ({(app.directors || []).length})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      List all Directors / Partners. Live geo-tagged selfies and Video KYC will be verified for each.
+                    </p>
+                  </div>
+                  {!showAddDirector && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddDirector(true)}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      Add Director
+                    </Button>
+                  )}
+                </div>
+
+                {(app.directors || []).length > 0 ? (
+                  <div className="space-y-3">
+                    {(app.directors || []).map((dir, idx) => (
+                      <div
+                        key={dir.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/20 p-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-foreground">
+                              {idx + 1}. {dir.fullName}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">
+                              {dir.designation}
+                            </Badge>
+                            {dir.selfie ? (
+                              <Badge className="bg-emerald-600 text-white text-[10px]">
+                                Geo-Photo Uploaded
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-amber-600 border-amber-500/40 text-[10px]">
+                                Photo Pending
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            DIN/DPIN: {dir.identificationNumber || "N/A"}
+                            {dir.pan ? ` • PAN: ${dir.pan}` : ""}
+                            {dir.email ? ` • ${dir.email}` : ""}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive h-7 px-2"
+                          onClick={() => handleRemoveDirector(dir.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">
+                    No directors listed yet. Click &quot;Add Director&quot; to add company directors.
+                  </p>
+                )}
+
+                {showAddDirector && (
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                    <p className="text-sm font-semibold">New Director Details</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Full Name *</Label>
+                        <Input
+                          value={newDirector.fullName}
+                          onChange={(e) =>
+                            setNewDirector((p) => ({ ...p, fullName: e.target.value }))
+                          }
+                          placeholder="e.g. Priya Nair"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Designation *</Label>
+                        <Input
+                          value={newDirector.designation}
+                          onChange={(e) =>
+                            setNewDirector((p) => ({ ...p, designation: e.target.value }))
+                          }
+                          placeholder="e.g. Director / Designated Partner"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">DIN / DPIN Number</Label>
+                        <Input
+                          value={newDirector.identificationNumber}
+                          onChange={(e) =>
+                            setNewDirector((p) => ({
+                              ...p,
+                              identificationNumber: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. 01234567"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">PAN</Label>
+                        <Input
+                          value={newDirector.pan}
+                          onChange={(e) =>
+                            setNewDirector((p) => ({ ...p, pan: e.target.value.toUpperCase() }))
+                          }
+                          placeholder="e.g. ABCDE1234F"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button type="button" size="sm" onClick={handleAddDirector}>
+                        Save Director
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddDirector(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <p className="mb-3 font-medium">Business Documents ({sectionSlots.length})</p>
                 <div className="space-y-3">
@@ -714,6 +959,16 @@ export default function WizardStepPage() {
                           />
                         ))}
                       </div>
+
+                      {/* Individual Geo-Selfie Verification */}
+                      <div className="pt-2 border-t">
+                        <GeoSelfieRecorder
+                          personName={ubo.fullName}
+                          personRole={`UBO (${ubo.ownershipPercentage}%)`}
+                          existingSelfie={ubo.selfie}
+                          onSaveSelfie={(s) => saveUboSelfie(app.id, ubo.id, s)}
+                        />
+                      </div>
                     </div>
                   );
                 })}
@@ -785,204 +1040,352 @@ export default function WizardStepPage() {
           {/* STEP 4: FINANCIAL */}
           {stepNum === 4 && (
             <>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="bankName">Bank Name *</Label>
-                  <Input
-                    id="bankName"
-                    value={app.financial.bankAccount.bankName}
-                    onChange={(e) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: {
-                          ...cur.financial,
-                          bankAccount: { ...cur.financial.bankAccount, bankName: e.target.value },
-                        },
-                      }))
-                    }
-                  />
+              {/* BANK ACCOUNTS SECTION */}
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      Corporate Bank Accounts ({((app.financial.bankAccounts && app.financial.bankAccounts.length > 0) ? app.financial.bankAccounts : [app.financial.bankAccount]).length})
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Add as many corporate bank accounts as needed. For every bank account added, upload the corresponding supporting documents separately.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accHolder">Account Holder Name *</Label>
-                  <Input
-                    id="accHolder"
-                    value={app.financial.bankAccount.accountHolderName}
-                    onChange={(e) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: {
-                          ...cur.financial,
-                          bankAccount: { ...cur.financial.bankAccount, accountHolderName: e.target.value },
-                        },
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accNo">Account Number *</Label>
-                  <Input
-                    id="accNo"
-                    value={app.financial.bankAccount.accountNumber}
-                    onChange={(e) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: {
-                          ...cur.financial,
-                          bankAccount: { ...cur.financial.bankAccount, accountNumber: e.target.value },
-                        },
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ifsc">IFSC *</Label>
-                  <Input
-                    id="ifsc"
-                    value={app.financial.bankAccount.ifsc}
-                    onChange={(e) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: {
-                          ...cur.financial,
-                          bankAccount: { ...cur.financial.bankAccount, ifsc: e.target.value.toUpperCase() },
-                        },
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Account Type *</Label>
-                  <Select
-                    value={app.financial.bankAccount.accountType || "current"}
-                    onValueChange={(val) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: {
-                          ...cur.financial,
-                          bankAccount: { ...cur.financial.bankAccount, accountType: val as BankAccountType },
-                        },
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(BANK_ACCOUNT_TYPE_LABELS).map(([k, label]) => (
-                        <SelectItem key={k} value={k}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sourceFunds">Source of Funds Category *</Label>
-                  <Select
-                    value={app.financial.sourceOfFundsCategory || "business_revenue"}
-                    onValueChange={(val) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: {
-                          ...cur.financial,
-                          sourceOfFundsCategory: val as SourceOfFundsCategory,
-                        },
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(SOURCE_OF_FUNDS_LABELS).map(([k, label]) => (
-                        <SelectItem key={k} value={k}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Expected Monthly Volume *</Label>
-                  <Select
-                    value={app.financial.expectedVolumeRange || VOLUME_RANGES[2]}
-                    onValueChange={(val) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: { ...cur.financial, expectedVolumeRange: val },
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {VOLUME_RANGES.map((v) => (
-                        <SelectItem key={v} value={v}>
-                          {v}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Expected Transaction Frequency *</Label>
-                  <Select
-                    value={app.financial.expectedFrequency || TRANSACTION_FREQUENCIES[2]}
-                    onValueChange={(val) =>
-                      updateApplication(app.id, (cur) => ({
-                        ...cur,
-                        financial: { ...cur.financial, expectedFrequency: val },
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TRANSACTION_FREQUENCIES.map((f) => (
-                        <SelectItem key={f} value={f}>
-                          {f}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                {((app.financial.bankAccounts && app.financial.bankAccounts.length > 0)
+                  ? app.financial.bankAccounts
+                  : [{ ...app.financial.bankAccount, id: app.financial.bankAccount.id || "bank-1", isPrimary: true }]
+                ).map((bank, idx) => {
+                  const bankId = bank.id || `bank-${idx + 1}`;
+                  const bankSlots = sectionSlots.filter((s) => s.ownerRef === bankId);
+                  const satisfiedDocs = bankSlots.filter(isSlotSatisfied).length;
+
+                  return (
+                    <div key={bankId} className="rounded-xl border bg-card p-5 space-y-4 shadow-2xs">
+                      {/* BANK HEADER */}
+                      <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-base text-foreground">
+                              {bank.bankName || `Bank Account ${idx + 1}`}
+                            </span>
+                            {bank.isPrimary ? (
+                              <Badge className="bg-primary text-primary-foreground text-xs">
+                                Primary Account
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                Secondary Account
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              {bank.accountType ? BANK_ACCOUNT_TYPE_LABELS[bank.accountType] : "Current Account"}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Holder: <span className="font-medium text-foreground">{bank.accountHolderName || app.business.legalName}</span> • A/C: <span className="font-mono">{bank.accountNumber || "Not entered"}</span> • IFSC: <span className="font-mono">{bank.ifsc || "Not entered"}</span>
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {!bank.isPrimary && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => setPrimaryBankAccount(app.id, bankId)}
+                            >
+                              Set as Primary
+                            </Button>
+                          )}
+                          {((app.financial.bankAccounts && app.financial.bankAccounts.length > 1) || false) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                              onClick={() => handleRemoveBank(bankId)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* SUPPORTING DOCUMENTS FOR THIS BANK ACCOUNT */}
+                      <div className="space-y-3 pt-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Mandatory Supporting Documents for {bank.bankName || `Account #${idx + 1}`}
+                          </p>
+                          <Badge
+                            variant={bankSlots.length > 0 && satisfiedDocs === bankSlots.length ? "default" : "outline"}
+                            className={bankSlots.length > 0 && satisfiedDocs === bankSlots.length ? "bg-emerald-600 text-white text-[11px]" : "text-[11px]"}
+                          >
+                            {satisfiedDocs} of {bankSlots.length} Uploaded
+                          </Badge>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {bankSlots.map((slot) => (
+                            <DocumentUploader
+                              key={`${slot.requirement.key}-${bankId}`}
+                              label={`${slot.label} (${bank.bankName})`}
+                              description={slot.requirement.description}
+                              required={slot.required}
+                              conditionLabel={slot.requirement.conditionLabel}
+                              existingDocument={slot.document}
+                              onUpload={(file) =>
+                                uploadDocument(app.id, file, {
+                                  requirementKey: slot.requirement.key,
+                                  section: "financial",
+                                  ownerRef: bankId,
+                                  label: `${slot.label} - ${bank.bankName} (..${bank.accountNumber ? bank.accountNumber.slice(-4) : "A/C"})`,
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* ADD BANK ACCOUNT BUTTON / FORM */}
+                {showAddBank ? (
+                  <div className="rounded-xl border bg-muted/30 p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        Add New Corporate Bank Account
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setShowAddBank(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="newBankName">Bank Name *</Label>
+                        <Input
+                          id="newBankName"
+                          value={newBank.bankName}
+                          onChange={(e) => setNewBank((p) => ({ ...p, bankName: e.target.value }))}
+                          placeholder="e.g. HDFC Bank, ICICI Bank, State Bank of India"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newAccHolder">Account Holder Name *</Label>
+                        <Input
+                          id="newAccHolder"
+                          value={newBank.accountHolderName}
+                          onChange={(e) => setNewBank((p) => ({ ...p, accountHolderName: e.target.value }))}
+                          placeholder={app.business.legalName || "Corporate entity name"}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newAccNo">Account Number *</Label>
+                        <Input
+                          id="newAccNo"
+                          value={newBank.accountNumber}
+                          onChange={(e) => setNewBank((p) => ({ ...p, accountNumber: e.target.value }))}
+                          placeholder="e.g. 50100987654321"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmAccNo">Confirm Account Number *</Label>
+                        <Input
+                          id="confirmAccNo"
+                          value={newBank.confirmAccountNumber}
+                          onChange={(e) => setNewBank((p) => ({ ...p, confirmAccountNumber: e.target.value }))}
+                          placeholder="Re-enter account number"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newIfsc">Bank IFSC Code *</Label>
+                        <Input
+                          id="newIfsc"
+                          value={newBank.ifsc}
+                          onChange={(e) => setNewBank((p) => ({ ...p, ifsc: e.target.value.toUpperCase() }))}
+                          placeholder="e.g. HDFC0001234"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Account Type *</Label>
+                        <Select
+                          value={newBank.accountType}
+                          onValueChange={(val) =>
+                            setNewBank((p) => ({ ...p, accountType: val as BankAccountType }))
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(BANK_ACCOUNT_TYPE_LABELS).map(([k, label]) => (
+                              <SelectItem key={k} value={k}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <Checkbox
+                        id="isPrimaryBank"
+                        checked={newBank.isPrimary}
+                        onCheckedChange={(checked) =>
+                          setNewBank((p) => ({ ...p, isPrimary: Boolean(checked) }))
+                        }
+                      />
+                      <Label htmlFor="isPrimaryBank" className="text-xs font-medium cursor-pointer">
+                        Set as Primary Corporate Bank Account for OTC settlements
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <Button type="button" onClick={handleAddBank}>
+                        <Plus className="mr-1.5 h-4 w-4" />
+                        Save Bank Account &amp; Proceed to Uploads
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setShowAddBank(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" onClick={() => setShowAddBank(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Another Bank Account
+                  </Button>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Source of Funds Explanation *</Label>
-                <Textarea
-                  value={app.financial.sourceOfFundsExplanation}
-                  onChange={(e) =>
-                    updateApplication(app.id, (cur) => ({
-                      ...cur,
-                      financial: { ...cur.financial, sourceOfFundsExplanation: e.target.value },
-                    }))
-                  }
-                />
-              </div>
+              {/* SOURCE OF FUNDS & TRADING VOLUME PROFILE */}
+              <div className="border-t pt-6 space-y-4">
+                <div>
+                  <h4 className="text-base font-semibold text-foreground">
+                    Source of Funds &amp; Expected Volume Profile
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Provide financial projections and legitimate source of funds information for compliance underwriting.
+                  </p>
+                </div>
 
-              <div>
-                <p className="mb-3 font-medium">Financial Documents</p>
-                <div className="space-y-3">
-                  {sectionSlots.map((slot) => (
-                    <DocumentUploader
-                      key={slot.requirement.key}
-                      label={slot.label}
-                      description={slot.requirement.description}
-                      required={slot.required}
-                      conditionLabel={slot.requirement.conditionLabel}
-                      existingDocument={slot.document}
-                      onUpload={(file) =>
-                        uploadDocument(app.id, file, {
-                          requirementKey: slot.requirement.key,
-                          section: "financial",
-                          label: slot.label,
-                        })
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="sourceFunds">Source of Funds Category *</Label>
+                    <Select
+                      value={app.financial.sourceOfFundsCategory || "business_revenue"}
+                      onValueChange={(val) =>
+                        updateApplication(app.id, (cur) => ({
+                          ...cur,
+                          financial: {
+                            ...cur.financial,
+                            sourceOfFundsCategory: val as SourceOfFundsCategory,
+                          },
+                        }))
                       }
-                    />
-                  ))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(SOURCE_OF_FUNDS_LABELS).map(([k, label]) => (
+                          <SelectItem key={k} value={k}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Expected Monthly Volume *</Label>
+                    <Select
+                      value={app.financial.expectedVolumeRange || VOLUME_RANGES[2]}
+                      onValueChange={(val) =>
+                        updateApplication(app.id, (cur) => ({
+                          ...cur,
+                          financial: { ...cur.financial, expectedVolumeRange: val },
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VOLUME_RANGES.map((v) => (
+                          <SelectItem key={v} value={v}>
+                            {v}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Expected Transaction Frequency *</Label>
+                    <Select
+                      value={app.financial.expectedFrequency || TRANSACTION_FREQUENCIES[2]}
+                      onValueChange={(val) =>
+                        updateApplication(app.id, (cur) => ({
+                          ...cur,
+                          financial: { ...cur.financial, expectedFrequency: val },
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TRANSACTION_FREQUENCIES.map((f) => (
+                          <SelectItem key={f} value={f}>
+                            {f}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Source of Funds Explanation *</Label>
+                  <Textarea
+                    value={app.financial.sourceOfFundsExplanation}
+                    placeholder="Describe how the company generates the capital used for OTC crypto trading..."
+                    onChange={(e) =>
+                      updateApplication(app.id, (cur) => ({
+                        ...cur,
+                        financial: { ...cur.financial, sourceOfFundsExplanation: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Trading Activity Description *</Label>
+                  <Textarea
+                    value={app.financial.tradingActivityDescription}
+                    placeholder="Describe the nature of corporate trading activities (hedging, treasury operations, liquidity provision, etc.)..."
+                    onChange={(e) =>
+                      updateApplication(app.id, (cur) => ({
+                        ...cur,
+                        financial: { ...cur.financial, tradingActivityDescription: e.target.value },
+                      }))
+                    }
+                  />
                 </div>
               </div>
             </>
@@ -1315,7 +1718,67 @@ export default function WizardStepPage() {
                 </div>
               </div>
 
-              <div className="border-t pt-6">
+              {/* GEO-LOCATION TAGGED PHOTO VERIFICATION FOR DIRECTORS & UBOS */}
+              <div className="border-t pt-8 space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
+                    <span>Geo-Location Photo Verification (Directors &amp; UBOs)</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {(app.directors || []).length} Directors • {(app.beneficialOwners || []).length} UBOs
+                    </Badge>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Regulatory requirement: Upload existing photos taken with a GPS Map Camera app for all Directors and Ultimate Beneficial Owners (UBOs), showing person&apos;s face with the stamped location, coordinates, and timestamp. Direct device camera capture is disabled.
+                  </p>
+                </div>
+
+                {/* Directors Photos */}
+                <div className="space-y-4">
+                  <p className="font-semibold text-xs text-foreground uppercase tracking-wider">
+                    Directors Geo-Tagged Photos ({(app.directors || []).length})
+                  </p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {(app.directors || []).map((dir) => (
+                      <GeoSelfieRecorder
+                        key={dir.id}
+                        personName={dir.fullName}
+                        personRole={dir.designation}
+                        existingSelfie={dir.selfie}
+                        onSaveSelfie={(selfie) => saveDirectorSelfie(app.id, dir.id, selfie)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Beneficial Owners Photos */}
+                <div className="space-y-4 pt-2">
+                  <p className="font-semibold text-xs text-foreground uppercase tracking-wider">
+                    Ultimate Beneficial Owners (UBOs) Geo-Tagged Photos ({(app.beneficialOwners || []).length})
+                  </p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {(app.beneficialOwners || []).map((ubo) => (
+                      <GeoSelfieRecorder
+                        key={ubo.id}
+                        personName={ubo.fullName}
+                        personRole={`UBO (${ubo.ownershipPercentage}%)`}
+                        existingSelfie={ubo.selfie}
+                        onSaveSelfie={(selfie) => saveUboSelfie(app.id, ubo.id, selfie)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* AUTHORIZED SIGNATORY MASTER VIDEO KYC */}
+              <div className="border-t pt-8 space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                    Authorized Signatory Master Video KYC
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Master corporate declaration recorded by the Authorized Signatory on behalf of the company and all listed directors &amp; beneficial owners.
+                  </p>
+                </div>
                 <VideoKycRecorder
                   app={app}
                   onUploadVideo={(file, spokenScript) => uploadVideoKyc(app.id, file, spokenScript)}
@@ -1375,8 +1838,13 @@ export default function WizardStepPage() {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {app.financial.bankAccount.bankName || "-"} ({app.financial.bankAccount.accountNumber || "-"}) •{" "}
-                    {app.financial.expectedVolumeRange || "-"}
+                    {((app.financial.bankAccounts && app.financial.bankAccounts.length > 0)
+                      ? app.financial.bankAccounts
+                      : [app.financial.bankAccount]
+                    )
+                      .map((b) => `${b.bankName || "Bank"} (${b.accountNumber ? `A/C ..${b.accountNumber.slice(-4)}` : "-"})`)
+                      .join(", ")}{" "}
+                    • Expected Volume: {app.financial.expectedVolumeRange || "-"}
                   </p>
                 </div>
 

@@ -91,12 +91,47 @@ export type EntityType =
   | "proprietorship"
   | "other";
 
+export interface GeoLocationTag {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  timestamp: string;
+  addressString?: string;
+}
+
+export interface IndividualSelfie {
+  id: string;
+  photoUrl: string;
+  fileName?: string;
+  fileSize?: number;
+  capturedAt: string;
+  geoLocation?: GeoLocationTag;
+  status: "pending" | "verified_demo" | "action_required";
+  verificationNote?: string;
+}
+
+export interface IndividualVideoKyc {
+  id: string;
+  status: VideoKycStatus;
+  videoUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  uploadedAt?: string;
+  spokenScript?: string;
+  officerNotes?: string;
+}
+
 export interface Director {
   id: string;
   fullName: string;
   designation: string;
   /** DIN / DPIN, where applicable. */
   identificationNumber: string;
+  pan?: string;
+  email?: string;
+  mobile?: string;
+  selfie?: IndividualSelfie;
+  videoKyc?: IndividualVideoKyc;
 }
 
 export interface BusinessProfile {
@@ -146,16 +181,20 @@ export interface BeneficialOwner {
   residentialAddress: Address;
   countryOfResidence: string;
   ownershipEvidence: string;
+  selfie?: IndividualSelfie;
+  videoKyc?: IndividualVideoKyc;
 }
 
 export type BankAccountType = "current" | "savings" | "cash_credit" | "overdraft";
 
 export interface BankAccount {
+  id?: string;
   bankName: string;
   accountHolderName: string;
   accountNumber: string;
   ifsc: string;
   accountType: BankAccountType | "";
+  isPrimary?: boolean;
 }
 
 export type SourceOfFundsCategory =
@@ -169,6 +208,7 @@ export type SourceOfFundsCategory =
 
 export interface FinancialProfile {
   bankAccount: BankAccount;
+  bankAccounts?: BankAccount[];
   sourceOfFundsCategory: SourceOfFundsCategory | "";
   sourceOfFundsExplanation: string;
   expectedVolumeRange: string;

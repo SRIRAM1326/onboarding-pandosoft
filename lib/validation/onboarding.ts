@@ -52,15 +52,18 @@ export const uboSchema = z.object({
 });
 
 export const bankAccountSchema = z.object({
+  id: z.string().optional(),
   bankName: z.string().min(1, "Bank name is required"),
   accountHolderName: z.string().min(1, "Account holder name is required"),
   accountNumber: z.string().min(1, "Account number is required"),
   ifsc: z.string().min(1, "IFSC is required"),
   accountType: z.string().min(1, "Account type is required"),
+  isPrimary: z.boolean().optional(),
 });
 
 export const financialSchema = z.object({
   bankAccount: bankAccountSchema,
+  bankAccounts: z.array(bankAccountSchema).optional(),
   sourceOfFundsCategory: z.string().min(1, "Source of funds category is required"),
   sourceOfFundsExplanation: z.string().min(10, "Please provide a detailed explanation (min 10 characters)"),
   expectedVolumeRange: z.string().min(1, "Expected trading volume range is required"),

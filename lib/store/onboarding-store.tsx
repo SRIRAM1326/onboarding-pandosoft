@@ -24,6 +24,10 @@ import type {
   User,
   WalletVerificationStatus,
   VideoKycStatus,
+  Director,
+  IndividualSelfie,
+  IndividualVideoKyc,
+  BankAccount,
 } from "@/lib/types";
 import {
   mockApplications,
@@ -143,6 +147,15 @@ interface OnboardingContextValue extends PersistedState {
     documentId: string,
     rawTextOverride?: string
   ) => void;
+  saveDirectorSelfie: (applicationId: string, directorId: string, selfie: IndividualSelfie) => void;
+  saveDirectorVideoKyc: (applicationId: string, directorId: string, videoKyc: IndividualVideoKyc) => void;
+  saveUboSelfie: (applicationId: string, uboId: string, selfie: IndividualSelfie) => void;
+  saveUboVideoKyc: (applicationId: string, uboId: string, videoKyc: IndividualVideoKyc) => void;
+  addDirector: (applicationId: string, director: Omit<Director, "id">) => void;
+  removeDirector: (applicationId: string, directorId: string) => void;
+  addBankAccount: (applicationId: string, account: Omit<BankAccount, "id">) => void;
+  removeBankAccount: (applicationId: string, accountId: string) => void;
+  setPrimaryBankAccount: (applicationId: string, accountId: string) => void;
 }
 
 const initialState: PersistedState = {
@@ -248,10 +261,46 @@ function loadPersistedState(): PersistedState {
                 : d
             );
           }
+          const directors =
+            a.id === "app-demo-001" &&
+            (!a.directors || a.directors.length === 0 || !a.directors[0]?.selfie)
+              ? mockApplications[0].directors
+              : a.directors || [];
+          const beneficialOwners =
+            a.id === "app-demo-001" &&
+            (!a.beneficialOwners ||
+              a.beneficialOwners.length === 0 ||
+              !a.beneficialOwners[0]?.selfie)
+              ? mockApplications[0].beneficialOwners
+              : a.beneficialOwners || [];
+
+          // Bank Accounts migration / normalization
+          const baseBank = a.financial?.bankAccount || mockApplications[0].financial.bankAccount;
+          const bankAccounts =
+            a.financial?.bankAccounts && a.financial.bankAccounts.length > 0
+              ? a.financial.bankAccounts.map((b, idx) => ({ ...b, id: b.id || `bank-${idx + 1}` }))
+              : [{ ...baseBank, id: baseBank.id || "bank-1", isPrimary: true }];
+          const financial = {
+            ...a.financial,
+            bankAccount: bankAccounts.find((b) => b.isPrimary) || bankAccounts[0] || baseBank,
+            bankAccounts,
+          };
+
+          // Attach un-owned financial docs to bank-1 if needed
+          docs = docs.map((d) => {
+            if (d.section === "financial" && !d.ownerRef && bankAccounts[0]?.id) {
+              return { ...d, ownerRef: bankAccounts[0].id };
+            }
+            return d;
+          });
+
           return {
             ...a,
             declarations: decls,
             documents: docs,
+            directors,
+            beneficialOwners,
+            financial,
             auditTrail,
           };
         }),
@@ -1757,6 +1806,188 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }));
   }, []);
 
+  const saveDirectorSelfie = useCallback(
+    (applicationId: string, directorId: string, selfie: IndividualSelfie) => {
+      updateApplication(
+        applicationId,
+        (cur) => ({
+          ...cur,
+          directors: (cur.directors || []).map((d) =>
+            d.id === directorId ? { ...d, selfie } : d
+          ),
+        }),
+        `Captured Geo-Tagged Selfie for Director`
+      );
+    },
+    [updateApplication]
+  );
+
+  const saveDirectorVideoKyc = useCallback(
+    (applicationId: string, directorId: string, videoKyc: IndividualVideoKyc) => {
+      updateApplication(
+        applicationId,
+        (cur) => ({
+          ...cur,
+          directors: (cur.directors || []).map((d) =>
+            d.id === directorId ? { ...d, videoKyc } : d
+          ),
+        }),
+        `Recorded Video KYC for Director`
+      );
+    },
+    [updateApplication]
+  );
+
+  const saveUboSelfie = useCallback(
+    (applicationId: string, uboId: string, selfie: IndividualSelfie) => {
+      updateApplication(
+        applicationId,
+        (cur) => ({
+          ...cur,
+          beneficialOwners: (cur.beneficialOwners || []).map((u) =>
+            u.id === uboId ? { ...u, selfie } : u
+          ),
+        }),
+        `Captured Geo-Tagged Selfie for Beneficial Owner`
+      );
+    },
+    [updateApplication]
+  );
+
+  const saveUboVideoKyc = useCallback(
+    (applicationId: string, uboId: string, videoKyc: IndividualVideoKyc) => {
+      updateApplication(
+        applicationId,
+        (cur) => ({
+          ...cur,
+          beneficialOwners: (cur.beneficialOwners || []).map((u) =>
+            u.id === uboId ? { ...u, videoKyc } : u
+          ),
+        }),
+        `Recorded Video KYC for Beneficial Owner`
+      );
+    },
+    [updateApplication]
+  );
+
+  const addDirector = useCallback(
+    (applicationId: string, directorData: Omit<Director, "id">) => {
+      const newDir: Director = {
+        ...directorData,
+        id: `dir-${Date.now()}`,
+      };
+      updateApplication(
+        applicationId,
+        (cur) => ({
+          ...cur,
+          directors: [...(cur.directors || []), newDir],
+        }),
+        `Added Director ${newDir.fullName}`
+      );
+    },
+    [updateApplication]
+  );
+
+  const removeDirector = useCallback(
+    (applicationId: string, directorId: string) => {
+      updateApplication(
+        applicationId,
+        (cur) => ({
+          ...cur,
+          directors: (cur.directors || []).filter((d) => d.id !== directorId),
+        }),
+        `Removed Director`
+      );
+    },
+    [updateApplication]
+  );
+
+  const addBankAccount = useCallback(
+    (applicationId: string, accountData: Omit<BankAccount, "id">) => {
+      const newAcc: BankAccount = {
+        ...accountData,
+        id: `bank-${Date.now()}`,
+      };
+      updateApplication(
+        applicationId,
+        (cur) => {
+          const currentList =
+            cur.financial?.bankAccounts && cur.financial.bankAccounts.length > 0
+              ? cur.financial.bankAccounts
+              : [{ ...cur.financial.bankAccount, id: cur.financial.bankAccount.id || "bank-1" }];
+          const updatedList = [...currentList, newAcc];
+          const primaryAcc = updatedList.find((b) => b.isPrimary) || updatedList[0];
+          return {
+            ...cur,
+            financial: {
+              ...cur.financial,
+              bankAccount: primaryAcc,
+              bankAccounts: updatedList,
+            },
+          };
+        },
+        `Added Bank Account ${newAcc.bankName}`
+      );
+    },
+    [updateApplication]
+  );
+
+  const removeBankAccount = useCallback(
+    (applicationId: string, accountId: string) => {
+      updateApplication(
+        applicationId,
+        (cur) => {
+          const currentList =
+            cur.financial?.bankAccounts && cur.financial.bankAccounts.length > 0
+              ? cur.financial.bankAccounts
+              : [{ ...cur.financial.bankAccount, id: cur.financial.bankAccount.id || "bank-1" }];
+          const updatedList = currentList.filter((b) => b.id !== accountId);
+          const primaryAcc =
+            updatedList.find((b) => b.isPrimary) || updatedList[0] || cur.financial.bankAccount;
+          return {
+            ...cur,
+            financial: {
+              ...cur.financial,
+              bankAccount: primaryAcc,
+              bankAccounts: updatedList,
+            },
+          };
+        },
+        `Removed Bank Account`
+      );
+    },
+    [updateApplication]
+  );
+
+  const setPrimaryBankAccount = useCallback(
+    (applicationId: string, accountId: string) => {
+      updateApplication(
+        applicationId,
+        (cur) => {
+          const currentList =
+            cur.financial?.bankAccounts && cur.financial.bankAccounts.length > 0
+              ? cur.financial.bankAccounts
+              : [{ ...cur.financial.bankAccount, id: cur.financial.bankAccount.id || "bank-1" }];
+          const updatedList = currentList.map((b) => ({
+            ...b,
+            isPrimary: b.id === accountId,
+          }));
+          const primaryAcc = updatedList.find((b) => b.id === accountId) || updatedList[0];
+          return {
+            ...cur,
+            financial: {
+              ...cur.financial,
+              bankAccount: primaryAcc,
+              bankAccounts: updatedList,
+            },
+          };
+        },
+        `Updated Primary Bank Account`
+      );
+    },
+    [updateApplication]
+  );
+
   const summaries = useMemo(
     () => state.applications.map(computeApplicationSummary),
     [state.applications]
@@ -1795,6 +2026,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       updatePolicy,
       verifyBharatOcrDetails,
       rescanDocumentWithBharatOcr,
+      saveDirectorSelfie,
+      saveDirectorVideoKyc,
+      saveUboSelfie,
+      saveUboVideoKyc,
+      addDirector,
+      removeDirector,
+      addBankAccount,
+      removeBankAccount,
+      setPrimaryBankAccount,
     }),
     [
       state,
@@ -1827,6 +2067,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       updatePolicy,
       verifyBharatOcrDetails,
       rescanDocumentWithBharatOcr,
+      saveDirectorSelfie,
+      saveDirectorVideoKyc,
+      saveUboSelfie,
+      saveUboVideoKyc,
+      addDirector,
+      removeDirector,
+      addBankAccount,
+      removeBankAccount,
+      setPrimaryBankAccount,
     ]
   );
 

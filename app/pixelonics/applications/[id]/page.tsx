@@ -473,29 +473,37 @@ export default function PixelonicsApplicationReviewPage() {
             </div>
             <CardDescription>Customer banking credentials &amp; source of funds</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between border-b pb-1.5">
-              <span className="text-muted-foreground">Bank Name</span>
-              <span className="font-medium">{app.financial.bankAccount.bankName}</span>
-            </div>
-            <div className="flex justify-between border-b pb-1.5">
-              <span className="text-muted-foreground">Account Holder</span>
-              <span>{app.financial.bankAccount.accountHolderName}</span>
-            </div>
-            <div className="flex justify-between border-b pb-1.5">
-              <span className="text-muted-foreground">Account / IFSC</span>
-              <span className="font-mono">
-                {app.financial.bankAccount.accountNumber} / {app.financial.bankAccount.ifsc}
-              </span>
-            </div>
-            <div className="flex justify-between border-b pb-1.5">
+          <CardContent className="space-y-4 text-sm">
+            {((app.financial.bankAccounts && app.financial.bankAccounts.length > 0)
+              ? app.financial.bankAccounts
+              : [{ ...app.financial.bankAccount, id: app.financial.bankAccount.id || "bank-1", isPrimary: true }]
+            ).map((bank, idx) => (
+              <div key={bank.id || idx} className="rounded-lg border bg-muted/20 p-3 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <span>{bank.bankName}</span>
+                    {bank.isPrimary && (
+                      <Badge className="bg-primary text-primary-foreground text-[10px]">Primary</Badge>
+                    )}
+                  </div>
+                  <span className="font-mono text-muted-foreground">{bank.accountNumber}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Holder: {bank.accountHolderName || app.business.legalName}</span>
+                  <span className="font-mono">IFSC: {bank.ifsc}</span>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-between border-b pb-1.5 text-xs">
               <span className="text-muted-foreground">Expected Volume</span>
               <span>{app.financial.expectedVolumeRange} ({app.financial.expectedFrequency})</span>
             </div>
-            <div className="pt-1">
-              <span className="text-xs text-muted-foreground">Source of Funds Explanation:</span>
-              <p className="text-xs font-medium mt-0.5">{app.financial.sourceOfFundsExplanation}</p>
-            </div>
+            {app.financial.sourceOfFundsExplanation && (
+              <div className="pt-1">
+                <span className="text-xs text-muted-foreground">Source of Funds Explanation:</span>
+                <p className="text-xs font-medium mt-0.5">{app.financial.sourceOfFundsExplanation}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

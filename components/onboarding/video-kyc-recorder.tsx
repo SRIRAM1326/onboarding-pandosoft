@@ -17,10 +17,12 @@ import {
   Database,
   FileVideo,
   Camera,
+  Users,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
-export const RAW_VIDEO_KYC_TEMPLATE = `My name is [Full Name], authorized representative of [Your Company Name], completing the Video KYC on [Date] for our Pandosoft trading account. The Company PAN is [Company PAN], my PAN is [Personal PAN], and the registered email is [Email ID]. This is my wallet ID: [Wallet ID Number]. 
+export const RAW_VIDEO_KYC_TEMPLATE = `My name is [Full Name], authorized representative of [Your Company Name], completing the Video KYC on [Date] for our Pandosoft trading account on behalf of the Board of Directors ([Names of Directors]) and Ultimate Beneficial Owners ([Names of UBOs]). The Company PAN is [Company PAN], my PAN is [Personal PAN], and the registered email is [Email ID]. This is my wallet ID: [Wallet ID Number]. 
 I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify Pandosoft against any false declarations made by us.`;
 
 export function buildPrefilledVideoKycScript(app: Application): string {
@@ -36,7 +38,19 @@ export function buildPrefilledVideoKycScript(app: Application): string {
   const emailId = app.signatory.email?.trim() || app.business.email?.trim() || "[Email ID]";
   const walletId = app.wallets[0]?.address?.trim() || "[Wallet ID Number]";
 
-  return `My name is ${fullName}, authorized representative of ${companyName}, completing the Video KYC on ${dateStr} for our Pandosoft trading account. The Company PAN is ${companyPan}, my PAN is ${personalPan}, and the registered email is ${emailId}. This is my wallet ID: ${walletId}. 
+  const directorNames = (app.directors || [])
+    .map((d) => d.fullName?.trim())
+    .filter(Boolean);
+  const uboNames = (app.beneficialOwners || [])
+    .map((u) => u.fullName?.trim())
+    .filter(Boolean);
+
+  const directorsSummary =
+    directorNames.length > 0 ? directorNames.join(", ") : "all appointed directors";
+  const ubosSummary =
+    uboNames.length > 0 ? uboNames.join(", ") : "all beneficial owners";
+
+  return `My name is ${fullName}, authorized representative of ${companyName}, completing the Video KYC on ${dateStr} for our Pandosoft trading account on behalf of the Board of Directors (${directorsSummary}) and Ultimate Beneficial Owners (${ubosSummary}). The Company PAN is ${companyPan}, my PAN is ${personalPan}, and the registered email is ${emailId}. This is my wallet ID: ${walletId}. 
 I confirm that I am duly authorized to operate this account as per the Board Resolution / Authorization Letter. We are the rightful owners of this account, and all funds used are from legitimate and lawful sources. These funds are not customer funds, borrowed funds, or pooled public money. Withdrawals are made only to verified, self-owned wallets, and we indemnify Pandosoft against any false declarations made by us.`;
 }
 
@@ -251,6 +265,63 @@ export function VideoKycRecorder({
               Saved in Database
             </Badge>
           )}
+        </div>
+      </div>
+
+      {/* DIRECTORS & BENEFICIAL OWNERS (UBOS) COVERED */}
+      <div className="rounded-xl border bg-muted/40 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-xs uppercase tracking-wider text-foreground">
+              Directors &amp; Beneficial Owners (UBOs) Covered Under This Video KYC
+            </span>
+          </div>
+          <Badge variant="outline" className="text-xs bg-background">
+            Single Master KYC Session (Authorized Signatory)
+          </Badge>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 text-xs">
+          <div className="rounded-lg border bg-background p-3 space-y-1.5 shadow-2xs">
+            <p className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+              Board of Directors ({(app.directors || []).length})
+            </p>
+            {(app.directors || []).length > 0 ? (
+              <ul className="space-y-1.5">
+                {(app.directors || []).map((dir) => (
+                  <li key={dir.id} className="flex items-center justify-between font-medium text-foreground">
+                    <span>{dir.fullName}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      ({dir.designation}{dir.identificationNumber ? ` • DIN: ${dir.identificationNumber}` : ""})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground italic">Listed under company registration</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border bg-background p-3 space-y-1.5 shadow-2xs">
+            <p className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+              Ultimate Beneficial Owners ({(app.beneficialOwners || []).length})
+            </p>
+            {(app.beneficialOwners || []).length > 0 ? (
+              <ul className="space-y-1.5">
+                {(app.beneficialOwners || []).map((ubo) => (
+                  <li key={ubo.id} className="flex items-center justify-between font-medium text-foreground">
+                    <span>{ubo.fullName}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      ({ubo.ownershipPercentage}% Ownership • {ubo.role})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground italic">Listed under beneficial ownership</p>
+            )}
+          </div>
         </div>
       </div>
 
