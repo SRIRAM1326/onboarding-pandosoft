@@ -664,22 +664,6 @@ export default function WizardStepPage() {
                   ))}
                 </div>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="auth"
-                  checked={app.signatory.authorizationSignedAndStamped}
-                  onCheckedChange={(checked) =>
-                    updateApplication(app.id, (cur) => ({
-                      ...cur,
-                      signatory: { ...cur.signatory, authorizationSignedAndStamped: Boolean(checked) },
-                    }))
-                  }
-                />
-                <Label htmlFor="auth" className="text-sm">
-                  I confirm that the Board Resolution / Authorization Letter is signed and company-stamped
-                </Label>
-              </div>
             </>
           )}
 

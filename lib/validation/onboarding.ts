@@ -36,7 +36,7 @@ export const signatorySchema = z.object({
   idDocumentType: z.string().min(1, "Identity document type is required"),
   idDocumentNumber: z.string().min(1, "Identity document number is required"),
   residentialAddress: addressSchema,
-  authorizationSignedAndStamped: z.boolean().refine((v) => v, "You must confirm authorization is signed and stamped where required"),
+  authorizationSignedAndStamped: z.boolean().optional(),
 });
 
 export const uboSchema = z.object({

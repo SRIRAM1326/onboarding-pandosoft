@@ -180,15 +180,6 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     level: "required",
     isRequired: () => true,
   },
-  {
-    key: "signatory_authorization",
-    label: "Board Resolution / Authorization Letter",
-    description: "Must be signed and stamped, authorizing the signatory to act on behalf of the entity.",
-    section: "signatory",
-    scope: "application",
-    level: "required",
-    isRequired: () => true,
-  },
 
   /* -------------------------------- UBO -------------------------------- */
   {
