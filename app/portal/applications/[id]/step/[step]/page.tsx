@@ -70,6 +70,7 @@ export default function WizardStepPage() {
     uploadDocument,
     uploadVideoKyc,
     policy,
+    hydrated,
   } = useOnboarding();
 
   const app = getApplication(id);
@@ -218,6 +219,19 @@ export default function WizardStepPage() {
   };
 
   const totalUboPercent = app.beneficialOwners.reduce((acc, u) => acc + (Number(u.ownershipPercentage) || 0), 0);
+
+  if (!hydrated) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-8 w-64 rounded-md bg-secondary" />
+          <div className="h-4 w-80 rounded-md bg-secondary/70" />
+        </div>
+        <div className="h-16 w-full rounded-xl border bg-card" />
+        <div className="h-96 w-full rounded-xl border bg-card" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

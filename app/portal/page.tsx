@@ -174,8 +174,8 @@ export default function PortalDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 text-sm">
-              {fullApp.auditTrail.slice(0, 5).map((ev) => (
-                <div key={ev.id} className="flex justify-between gap-2">
+              {fullApp.auditTrail.slice(0, 5).map((ev, idx) => (
+                <div key={`${ev.id}-${idx}`} className="flex justify-between gap-2">
                   <span className="truncate">{ev.label}</span>
                   <span className="shrink-0 text-muted-foreground">
                     {new Date(ev.timestamp).toLocaleDateString()}

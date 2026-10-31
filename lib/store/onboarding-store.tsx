@@ -42,6 +42,12 @@ import { toast } from "sonner";
 
 const STORAGE_KEY = "pixelonics_onboarding_state_v1";
 
+let idCounter = 0;
+function uniqueId(prefix: string): string {
+  idCounter += 1;
+  return `${prefix}-${Date.now()}-${idCounter}-${Math.random().toString(36).substring(2, 7)}`;
+}
+
 interface PersistedState {
   currentUser: User;
   users: User[];
@@ -218,13 +224,35 @@ function loadPersistedState(): PersistedState {
             !a.declarations || a.declarations.length === 0 || hasOldDeclarations
               ? mockApplications[0].declarations
               : a.declarations;
+          const seenAuditIds = new Set<string>();
+          const auditTrail = (a.auditTrail || []).map((ev, idx) => {
+            let evId = ev.id || uniqueId("audit");
+            if (seenAuditIds.has(evId)) {
+              evId = `${evId}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
+            }
+            seenAuditIds.add(evId);
+            return { ...ev, id: evId };
+          });
+          let docs = a.documents || [];
+          if (
+            a.id === "app-demo-001" &&
+            (!a.documents ||
+              a.documents.length === 0 ||
+              a.documents.some((d) => d.requirementKey === "business_constitution"))
+          ) {
+            docs = mockApplications[0].documents;
+          } else if (docs.some((d) => d.requirementKey === "business_constitution")) {
+            docs = docs.map((d) =>
+              d.requirementKey === "business_constitution"
+                ? { ...d, requirementKey: "business_moa", label: "Memorandum of Association (MOA)" }
+                : d
+            );
+          }
           return {
             ...a,
             declarations: decls,
-            documents:
-              a.id === "app-demo-001" && (!a.documents || a.documents.length === 0)
-                ? mockApplications[0].documents
-                : a.documents,
+            documents: docs,
+            auditTrail,
           };
         }),
       };
@@ -501,7 +529,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         verifications: [],
         auditTrail: [
           {
-            id: `audit-${Date.now()}`,
+            id: uniqueId("audit"),
             applicationId: `app-${Date.now()}`,
             applicationReference: `PX-2026-${suffix}`,
             type: "application_created",
@@ -523,7 +551,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           applications: [newApp, ...prev.applications],
           notifications: [
             {
-              id: `notif-${Date.now()}`,
+              id: uniqueId("notif"),
               userId: prev.currentUser.id,
               applicationId: newApp.id,
               kind: "info",
@@ -562,7 +590,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           if (auditLabel) {
             next.auditTrail = [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "draft_saved",
@@ -605,7 +633,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           updatedAt: now,
           auditTrail: [
             {
-              id: `audit-${Date.now()}`,
+              id: uniqueId("audit"),
               applicationId: app.id,
               applicationReference: app.reference,
               type: "application_submitted",
@@ -631,7 +659,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         applications: apps,
         notifications: [
           {
-            id: `notif-${Date.now()}`,
+            id: uniqueId("notif"),
             userId: prev.currentUser.id,
             applicationId: id,
             kind: "status",
@@ -742,7 +770,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             documents: nextDocs,
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: (existingIdx >= 0 ? "document_replaced" : "document_uploaded") as
@@ -856,7 +884,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             ),
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "document_reviewed" as const,
@@ -956,7 +984,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             documents: nextDocs,
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "document_reviewed" as const,
@@ -1019,7 +1047,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       const now = new Date().toISOString();
       const currentUser = stateRef.current.currentUser;
       const corr: CorrectionRequest = {
-        id: `corr-${Date.now()}`,
+        id: uniqueId("corr"),
         applicationId,
         sections: payload.sections,
         documentIds: [],
@@ -1046,7 +1074,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             corrections: [corr, ...app.corrections],
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "correction_requested" as const,
@@ -1069,7 +1097,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           applications: apps,
           notifications: [
             {
-              id: `notif-${Date.now()}`,
+              id: uniqueId("notif"),
               userId: prev.currentUser.id,
               applicationId,
               kind: "action_required",
@@ -1106,7 +1134,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                     responses: [
                       ...c.responses,
                       {
-                        id: `resp-${Date.now()}`,
+                        id: uniqueId("resp"),
                         message,
                         respondedAt: now,
                         respondedBy: {
@@ -1121,7 +1149,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             ),
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "correction_responded" as const,
@@ -1198,7 +1226,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             updatedAt: now,
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "decision_recorded" as const,
@@ -1221,7 +1249,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           applications: apps,
           notifications: [
             {
-              id: `notif-${Date.now()}`,
+              id: uniqueId("notif"),
               userId: prev.currentUser.id,
               applicationId,
               kind: "status",
@@ -1251,7 +1279,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           updatedAt: now,
           auditTrail: [
             {
-              id: `audit-${Date.now()}`,
+              id: uniqueId("audit"),
               applicationId: app.id,
               applicationReference: app.reference,
               type: "reviewer_assigned" as const,
@@ -1291,7 +1319,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           updatedAt: now,
           auditTrail: [
             {
-              id: `audit-${Date.now()}`,
+              id: uniqueId("audit"),
               applicationId: app.id,
               applicationReference: app.reference,
               type: "decision_recorded" as const,
@@ -1326,7 +1354,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         opsChecklists: updatedChecklists,
         notifications: [
           {
-            id: `notif-${Date.now()}`,
+            id: uniqueId("notif"),
             userId: "usr-pan-rev-1",
             applicationId,
             kind: "status" as const,
@@ -1361,7 +1389,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           },
           auditTrail: [
             {
-              id: `audit-${Date.now()}`,
+              id: uniqueId("audit"),
               applicationId: app.id,
               applicationReference: app.reference,
               type: "video_kyc_scheduled" as const,
@@ -1399,7 +1427,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             },
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "video_kyc_recorded" as const,
@@ -1568,7 +1596,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             documents: nextDocs,
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "video_kyc_recorded" as const,
@@ -1618,7 +1646,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             ),
             auditTrail: [
               {
-                id: `audit-${Date.now()}`,
+                id: uniqueId("audit"),
                 applicationId: app.id,
                 applicationReference: app.reference,
                 type: "wallet_verification_recorded" as const,
@@ -1652,7 +1680,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           updatedAt: now,
           internalNotes: [
             {
-              id: `note-${Date.now()}`,
+              id: uniqueId("note"),
               body,
               author: {
                 id: prev.currentUser.id,
@@ -1665,7 +1693,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           ],
           auditTrail: [
             {
-              id: `audit-${Date.now()}`,
+              id: uniqueId("audit"),
               applicationId: app.id,
               applicationReference: app.reference,
               type: "internal_note_added" as const,

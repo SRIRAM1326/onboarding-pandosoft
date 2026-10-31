@@ -19,8 +19,8 @@ export default function PixelonicsAuditTrailPage() {
           <CardTitle>All Events ({events.length})</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {events.map((event) => (
-            <div key={event.id} className="flex justify-between border-b pb-3 last:border-0">
+          {events.map((event, idx) => (
+            <div key={`${event.id}-${idx}`} className="flex justify-between border-b pb-3 last:border-0">
               <div>
                 <p className="font-medium">
                   {event.label}{" "}

@@ -47,6 +47,7 @@ export default function AdminApplicationReviewPage() {
     reviewDocument,
     addInternalNote,
     policy,
+    hydrated,
   } = useOnboarding();
 
   const app = getApplication(id);
@@ -56,6 +57,18 @@ export default function AdminApplicationReviewPage() {
   const [showCorr, setShowCorr] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<ApplicationDocument | null>(null);
   const [videoNotes, setVideoNotes] = useState(app.videoKyc.outcomeNote || "");
+
+  if (!hydrated) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-8 w-64 rounded-md bg-secondary" />
+          <div className="h-4 w-80 rounded-md bg-secondary/70" />
+        </div>
+        <div className="h-64 w-full rounded-xl border bg-card" />
+      </div>
+    );
+  }
 
   const handleApprove = (reason: string) => {
     recordDecision(app.id, "approved", reason);
@@ -637,8 +650,8 @@ export default function AdminApplicationReviewPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {app.auditTrail.map((event) => (
-                  <div key={event.id} className="flex gap-4 border-l-2 border-primary/30 pl-4">
+                {app.auditTrail.map((event, idx) => (
+                  <div key={`${event.id}-${idx}`} className="flex gap-4 border-l-2 border-primary/30 pl-4">
                     <div className="flex-1">
                       <p className="font-medium">{event.label}</p>
                       <p className="text-sm text-muted-foreground">{event.description}</p>

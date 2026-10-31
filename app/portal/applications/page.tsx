@@ -9,7 +9,19 @@ import { useOnboarding } from "@/lib/store/onboarding-store";
 import { PlusCircle } from "lucide-react";
 
 export default function ApplicationsListPage() {
-  const { summaries } = useOnboarding();
+  const { summaries, hydrated } = useOnboarding();
+
+  if (!hydrated) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-8 w-64 rounded-md bg-secondary" />
+          <div className="h-4 w-80 rounded-md bg-secondary/70" />
+        </div>
+        <div className="h-64 w-full rounded-xl border bg-card" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

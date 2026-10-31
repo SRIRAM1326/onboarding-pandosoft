@@ -18,11 +18,21 @@ export interface DocumentRequirement {
   level: RequirementLevel;
   /** Shown next to conditional requirements, e.g. "Required when a GSTIN is provided". */
   conditionLabel?: string;
+  /** Evaluates whether the requirement is applicable to this entity/application type. */
+  isApplicable?: (app: Application) => boolean;
   /** Evaluates whether the requirement applies to a given application. */
   isRequired: (app: Application, policy: CompliancePolicy, ownerRef?: string) => boolean;
 }
 
 const COMPANY_TYPES: EntityType[] = ["private_limited", "public_limited"];
+
+function isCompany(app: Application): boolean {
+  return COMPANY_TYPES.includes(app.business.entityType as EntityType);
+}
+
+function isPartnershipOrLlp(app: Application): boolean {
+  return app.business.entityType === "partnership" || app.business.entityType === "llp";
+}
 
 function isNotProprietorship(app: Application): boolean {
   return app.business.entityType !== "proprietorship";
@@ -30,15 +40,12 @@ function isNotProprietorship(app: Application): boolean {
 
 export function constitutionDocumentLabel(entityType: EntityType | ""): string {
   switch (entityType) {
-    case "private_limited":
-    case "public_limited":
-      return "MOA & AOA";
     case "llp":
       return "LLP Agreement";
     case "partnership":
       return "Partnership Deed";
     default:
-      return "MOA & AOA / Partnership Deed / LLP Agreement";
+      return "Partnership Deed / LLP Agreement";
   }
 }
 
@@ -73,14 +80,37 @@ export const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     isRequired: (app) => app.business.gstin.trim().length > 0,
   },
   {
-    key: "business_constitution",
-    label: "MOA & AOA / Partnership Deed / LLP Agreement",
-    description: "Constitutional document applicable to the entity type.",
+    key: "business_moa",
+    label: "Memorandum of Association (MOA)",
+    description: "Clear copy of the signed / certified Memorandum of Association (MOA).",
     section: "business",
     scope: "application",
     level: "conditional",
-    conditionLabel: "Not applicable to proprietorships",
-    isRequired: (app) => isNotProprietorship(app),
+    conditionLabel: "Required for Private & Public Limited companies",
+    isApplicable: (app) => !app.business.entityType || isCompany(app),
+    isRequired: (app) => isCompany(app) || !app.business.entityType,
+  },
+  {
+    key: "business_aoa",
+    label: "Articles of Association (AOA)",
+    description: "Clear copy of the signed / certified Articles of Association (AOA).",
+    section: "business",
+    scope: "application",
+    level: "conditional",
+    conditionLabel: "Required for Private & Public Limited companies",
+    isApplicable: (app) => !app.business.entityType || isCompany(app),
+    isRequired: (app) => isCompany(app) || !app.business.entityType,
+  },
+  {
+    key: "business_constitution",
+    label: "Partnership Deed / LLP Agreement",
+    description: "Constitutional document applicable to LLPs and Partnerships.",
+    section: "business",
+    scope: "application",
+    level: "conditional",
+    conditionLabel: "Required for LLP / Partnership entities",
+    isApplicable: (app) => !app.business.entityType || isPartnershipOrLlp(app),
+    isRequired: (app) => isPartnershipOrLlp(app),
   },
   {
     key: "business_udyam",
@@ -330,6 +360,9 @@ export function getDocumentSlots(app: Application, policy: CompliancePolicy, sec
   const requirements = section ? requirementsForSection(section) : DOCUMENT_REQUIREMENTS;
 
   for (const requirement of requirements) {
+    if (requirement.isApplicable && !requirement.isApplicable(app)) {
+      continue;
+    }
     const label = resolveRequirementLabel(requirement, app, policy);
     if (requirement.scope === "application") {
       slots.push({
